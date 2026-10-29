@@ -123,12 +123,14 @@ watch(
 
 // 账号数据目录（app.db / 插件 / 日志）
 const dataDirInfo = ref({ default: '', configured: null, effective: '' })
+const dataDirDisplay = ref('')
 const dataDirPending = ref(false)
 const restarting = ref(false)
 
 async function loadDataDir() {
 	try {
 		dataDirInfo.value = await invoke('plugin:utils|get_data_dir')
+		dataDirDisplay.value = dataDirInfo.value.effective
 	} catch (error) {
 		console.warn('[data-dir] load failed', error)
 	}
@@ -230,27 +232,44 @@ async function findLauncherDir() {
 			<h2 class="m-0 text-lg font-semibold text-contrast">
 				{{ formatMessage(messages.dataDirTitle) }}
 			</h2>
+			<Input
+				id="dataDir"
+				v-model="dataDirDisplay"
+				:icon="BoxIcon"
+				type="text"
+				wrapper-class="w-full"
+			>
+				<template #right>
+					<IconButton
+						v-tooltip="formatMessage(messages.dataDirBrowse)"
+						:label="formatMessage(messages.dataDirBrowse)"
+						class="ml-1.5"
+						@click="chooseDataDir"
+					>
+						<FolderSearchIcon aria-hidden="true" />
+					</IconButton>
+				</template>
+			</Input>
 			<p class="m-0 leading-tight text-secondary">
 				{{ formatMessage(messages.dataDirDescription) }}
 			</p>
-			<p class="m-0 break-all text-sm text-secondary">
-				{{ formatMessage(messages.dataDirCurrent, { path: dataDirInfo.effective }) }}
-			</p>
-			<div class="flex flex-wrap items-center gap-2">
-				<Button type="outlined" @click="chooseDataDir">
-					<FolderSearchIcon />
-					{{ formatMessage(messages.dataDirBrowse) }}
-				</Button>
+			<div class="mt-1 flex flex-wrap items-center gap-2">
 				<Button v-if="dataDirInfo.configured" type="outlined" @click="resetDataDir">
 					{{ formatMessage(messages.dataDirReset) }}
 				</Button>
-				<Button v-if="dataDirPending" type="colored" color="brand" :disabled="restarting" @click="restartLauncher">
+				<Button
+					v-if="dataDirPending"
+					type="colored"
+					color="brand"
+					:disabled="restarting"
+					@click="restartLauncher"
+				>
 					{{ formatMessage(messages.dataDirRestart) }}
 				</Button>
+				<p v-if="dataDirPending" class="m-0 leading-tight text-sm text-brand">
+					{{ formatMessage(messages.dataDirPending) }}
+				</p>
 			</div>
-			<p v-if="dataDirPending" class="m-0 leading-tight text-sm text-brand">
-				{{ formatMessage(messages.dataDirPending) }}
-			</p>
 		</div>
 
 		<div class="flex flex-col gap-2.5">
