@@ -312,6 +312,13 @@ impl State {
     async fn initialize_state(
         app_identifier: String,
     ) -> crate::Result<Arc<Self>> {
+        // 如果用户设置了新的数据目录，先把老数据复制过去
+        if let Err(error) =
+            crate::api::data_dir::migrate_if_needed(&app_identifier).await
+        {
+            tracing::warn!("Failed to migrate launcher data directory: {error}");
+        }
+
         tracing::info!("Connecting to app database");
         let settings_dir = DirectoryInfo::initial_settings_dir_path(
             &app_identifier,

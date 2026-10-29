@@ -398,6 +398,8 @@ fn main() {
                     "prefs_get_all",
                     "prefs_set",
                     "debug_log_append",
+                    "get_data_dir",
+                    "set_data_dir",
                     "translate_text",
                 ])
                     .default_permission(

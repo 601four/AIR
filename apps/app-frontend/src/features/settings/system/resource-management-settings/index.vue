@@ -1,6 +1,6 @@
 <script setup>
 import { BoxIcon, FolderSearchIcon } from '@modrinth/assets'
-import { Combobox, defineMessages, IconButton, Input, Slider, useVIntl } from '@modrinth/ui'
+import { Button, Combobox, defineMessages, IconButton, Input, Slider, useVIntl } from '@modrinth/ui'
 import { open } from '@tauri-apps/plugin-dialog'
 import { invoke } from '@tauri-apps/api/core'
 import { computed, ref, watch } from 'vue'
@@ -56,6 +56,20 @@ const messages = defineMessages({
 		defaultMessage:
 			'Auto-tuned between 8 and 96 based on bandwidth; this is the initial value.',
 	},
+	dataDirTitle: { id: 'app.dataDir.title', defaultMessage: 'Account data directory' },
+	dataDirDescription: {
+		id: 'app.dataDir.description',
+		defaultMessage:
+			'Where the database, plugins and logs are stored. Changing it copies the existing data to the new folder and takes effect after a restart.',
+	},
+	dataDirCurrent: { id: 'app.dataDir.current', defaultMessage: 'Current: {path}' },
+	dataDirBrowse: { id: 'app.dataDir.browse', defaultMessage: 'Choose folder' },
+	dataDirReset: { id: 'app.dataDir.reset', defaultMessage: 'Reset to default' },
+	dataDirRestart: { id: 'app.dataDir.restart', defaultMessage: 'Restart now' },
+	dataDirPending: {
+		id: 'app.dataDir.pending',
+		defaultMessage: 'New location saved. Restart the launcher to apply it.',
+	},
 	appDirectoryTitle: {
 		id: 'app.settings.resource-management.app-directory.title',
 		defaultMessage: 'App directory',
@@ -106,6 +120,56 @@ watch(
 	},
 	{ deep: true },
 )
+
+// 账号数据目录（app.db / 插件 / 日志）
+const dataDirInfo = ref({ default: '', configured: null, effective: '' })
+const dataDirPending = ref(false)
+const restarting = ref(false)
+
+async function loadDataDir() {
+	try {
+		dataDirInfo.value = await invoke('plugin:utils|get_data_dir')
+	} catch (error) {
+		console.warn('[data-dir] load failed', error)
+	}
+}
+
+async function chooseDataDir() {
+	const picked = await open({
+		multiple: false,
+		directory: true,
+		title: formatMessage(messages.dataDirBrowse),
+	})
+	if (!picked) return
+	try {
+		await invoke('plugin:utils|set_data_dir', { path: picked })
+		dataDirPending.value = true
+		await loadDataDir()
+	} catch (error) {
+		console.warn('[data-dir] set failed', error)
+	}
+}
+
+async function resetDataDir() {
+	try {
+		await invoke('plugin:utils|set_data_dir', { path: null })
+		dataDirPending.value = true
+		await loadDataDir()
+	} catch (error) {
+		console.warn('[data-dir] reset failed', error)
+	}
+}
+
+async function restartLauncher() {
+	restarting.value = true
+	try {
+		await invoke('restart_app')
+	} finally {
+		restarting.value = false
+	}
+}
+
+loadDataDir()
 
 async function findLauncherDir() {
 	const newDir = await open({
@@ -159,6 +223,33 @@ async function findLauncherDir() {
 			</Input>
 			<p class="m-0 leading-tight text-secondary">
 				{{ formatMessage(messages.appDirectoryDescription) }} <!-- 显示：AirCore存储实例和其他文件的位置。更改会在重启程序后生效。 -->
+			</p>
+		</div>
+
+		<div class="flex flex-col gap-2.5">
+			<h2 class="m-0 text-lg font-semibold text-contrast">
+				{{ formatMessage(messages.dataDirTitle) }}
+			</h2>
+			<p class="m-0 leading-tight text-secondary">
+				{{ formatMessage(messages.dataDirDescription) }}
+			</p>
+			<p class="m-0 break-all text-sm text-secondary">
+				{{ formatMessage(messages.dataDirCurrent, { path: dataDirInfo.effective }) }}
+			</p>
+			<div class="flex flex-wrap items-center gap-2">
+				<Button type="outlined" @click="chooseDataDir">
+					<FolderSearchIcon />
+					{{ formatMessage(messages.dataDirBrowse) }}
+				</Button>
+				<Button v-if="dataDirInfo.configured" type="outlined" @click="resetDataDir">
+					{{ formatMessage(messages.dataDirReset) }}
+				</Button>
+				<Button v-if="dataDirPending" type="colored" color="brand" :disabled="restarting" @click="restartLauncher">
+					{{ formatMessage(messages.dataDirRestart) }}
+				</Button>
+			</div>
+			<p v-if="dataDirPending" class="m-0 leading-tight text-sm text-brand">
+				{{ formatMessage(messages.dataDirPending) }}
 			</p>
 		</div>
 

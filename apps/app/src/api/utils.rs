@@ -56,6 +56,8 @@ pub fn init<R: Runtime>() -> tauri::plugin::TauriPlugin<R> {
             set_download_source,
             prefs_get_all,
             debug_log_append,
+            get_data_dir,
+            set_data_dir,
             prefs_set,
             translate_text,
 ])
@@ -322,10 +324,13 @@ pub async fn prefs_set(key: String, value: String) -> std::result::Result<(), St
 pub fn debug_log_append<R: tauri::Runtime>(app: tauri::AppHandle<R>, lines: String) -> bool {
     use std::io::Write;
     use tauri::Manager;
-    let Ok(dir) = app.path().app_data_dir() else {
+    let identifier = app.config().identifier.clone();
+    let Some(base) = theseus::data_dir::effective_dir(&identifier)
+        .or_else(|| app.path().app_data_dir().ok())
+    else {
         return false;
     };
-    let log_dir = dir.join("logs");
+    let log_dir = base.join("logs");
     if std::fs::create_dir_all(&log_dir).is_err() {
         return false;
     }
@@ -334,6 +339,39 @@ pub fn debug_log_append<R: tauri::Runtime>(app: tauri::AppHandle<R>, lines: Stri
         Ok(mut file) => file.write_all(lines.as_bytes()).is_ok(),
         Err(_) => false,
     }
+}
+
+/// 读取当前账号数据目录（app.db / 插件 / 日志 所在位置）
+#[tauri::command]
+pub fn get_data_dir<R: tauri::Runtime>(
+    app: tauri::AppHandle<R>,
+) -> std::result::Result<serde_json::Value, String> {
+    use tauri::Manager;
+    let identifier = app.config().identifier.clone();
+    let default_dir = theseus::data_dir::default_dir(&identifier)
+        .map(|p| p.to_string_lossy().into_owned())
+        .unwrap_or_default();
+    let configured = theseus::data_dir::configured_dir(&identifier)
+        .map(|p| p.to_string_lossy().into_owned());
+    let effective = theseus::data_dir::effective_dir(&identifier)
+        .or_else(|| app.path().app_data_dir().ok())
+        .map(|p| p.to_string_lossy().into_owned())
+        .unwrap_or_default();
+    Ok(serde_json::json!({
+        "default": default_dir,
+        "configured": configured,
+        "effective": effective,
+    }))
+}
+
+/// 设置账号数据目录：path = None 表示恢复默认；重启后生效
+#[tauri::command]
+pub fn set_data_dir<R: tauri::Runtime>(
+    app: tauri::AppHandle<R>,
+    path: Option<String>,
+) -> std::result::Result<(), String> {
+    let identifier = app.config().identifier.clone();
+    theseus::data_dir::set_configured_dir(&identifier, path).map_err(|e| e.to_string())
 }
 
 /// 切换 Minecraft 下载源："official" | "bmclapi"

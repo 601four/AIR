@@ -40,7 +40,10 @@ fn default_entry() -> String {
 /// 扩展目录：<app_data>/extensions/
 pub fn extensions_dir<R: tauri::Runtime>(app: &tauri::AppHandle<R>) -> Option<PathBuf> {
 	use tauri::Manager;
-	app.path().app_data_dir().ok().map(|dir| dir.join("extensions"))
+	let identifier = app.config().identifier.clone();
+	theseus::data_dir::effective_dir(&identifier)
+		.or_else(|| app.path().app_data_dir().ok())
+		.map(|dir| dir.join("extensions"))
 }
 
 pub fn init<R: tauri::Runtime>() -> tauri::plugin::TauriPlugin<R> {

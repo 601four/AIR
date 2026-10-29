@@ -1,4 +1,5 @@
 //! API for interacting with Theseus
+pub mod data_dir;
 pub mod prefs;
 pub mod cache;
 pub mod debug_info;
@@ -50,7 +51,7 @@ pub mod prelude {
         data::*,
         event::CommandPayload,
         install, instance, jre, metadata, minecraft_auth, mr_auth,
-        onboarding_checklist, pack, prefs, process, settings,
+        data_dir, onboarding_checklist, pack, prefs, process, settings,
         state::{ReleaseChannel, db_backup::app_db_backup_dir},
         util::{
             io::{IOError, canonicalize},

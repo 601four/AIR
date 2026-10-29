@@ -4882,5 +4882,26 @@
   },
   "app.library.empty.none": {
     "message": "No instances yet"
+  },
+  "app.dataDir.title": {
+    "message": "Account data directory"
+  },
+  "app.dataDir.description": {
+    "message": "Where the database, plugins and logs are stored. Changing it copies the existing data to the new folder and takes effect after a restart."
+  },
+  "app.dataDir.current": {
+    "message": "Current: {path}"
+  },
+  "app.dataDir.browse": {
+    "message": "Choose folder"
+  },
+  "app.dataDir.reset": {
+    "message": "Reset to default"
+  },
+  "app.dataDir.restart": {
+    "message": "Restart now"
+  },
+  "app.dataDir.pending": {
+    "message": "New location saved. Restart the launcher to apply it."
   }
 }
