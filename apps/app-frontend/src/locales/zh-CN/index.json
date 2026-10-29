@@ -4889,9 +4889,6 @@
   "app.dataDir.description": {
     "message": "数据库、插件、日志存放的位置。更改后会把现有数据复制到新目录，重启后生效。"
   },
-  "app.dataDir.current": {
-    "message": "当前：{path}"
-  },
   "app.dataDir.browse": {
     "message": "选择目录"
   },
@@ -4903,5 +4900,8 @@
   },
   "app.dataDir.pending": {
     "message": "新位置已保存，重启启动器后生效。"
+  },
+  "app.dataDir.setFailed": {
+    "message": "修改数据目录失败"
   }
 }

@@ -1,6 +1,15 @@
 <script setup>
 import { BoxIcon, FolderSearchIcon } from '@modrinth/assets'
-import { Button, Combobox, defineMessages, IconButton, Input, Slider, useVIntl } from '@modrinth/ui'
+import {
+	Button,
+	Combobox,
+	defineMessages,
+	IconButton,
+	injectNotificationManager,
+	Input,
+	Slider,
+	useVIntl,
+} from '@modrinth/ui'
 import { open } from '@tauri-apps/plugin-dialog'
 import { invoke } from '@tauri-apps/api/core'
 import { computed, ref, watch } from 'vue'
@@ -12,6 +21,7 @@ import { get, set } from '@/helpers/settings.ts'
 import ContentStorageSettings from './content-storage.vue'
 
 const { formatMessage } = useVIntl()
+const { addNotification } = injectNotificationManager()
 const settings = ref(await get())
 
 // Minecraft 下载源
@@ -62,7 +72,10 @@ const messages = defineMessages({
 		defaultMessage:
 			'Where the database, plugins and logs are stored. Changing it copies the existing data to the new folder and takes effect after a restart.',
 	},
-	dataDirCurrent: { id: 'app.dataDir.current', defaultMessage: 'Current: {path}' },
+	dataDirSetFailed: {
+		id: 'app.dataDir.setFailed',
+		defaultMessage: 'Failed to change the data directory',
+	},
 	dataDirBrowse: { id: 'app.dataDir.browse', defaultMessage: 'Choose folder' },
 	dataDirReset: { id: 'app.dataDir.reset', defaultMessage: 'Reset to default' },
 	dataDirRestart: { id: 'app.dataDir.restart', defaultMessage: 'Restart now' },
@@ -146,9 +159,15 @@ async function chooseDataDir() {
 	try {
 		await invoke('plugin:utils|set_data_dir', { path: picked })
 		dataDirPending.value = true
+		dataDirDisplay.value = picked
 		await loadDataDir()
 	} catch (error) {
-		console.warn('[data-dir] set failed', error)
+		console.error('[data-dir] set failed', error)
+		addNotification({
+			type: 'error',
+			title: formatMessage(messages.dataDirSetFailed),
+			text: String(error),
+		})
 	}
 }
 
@@ -158,7 +177,12 @@ async function resetDataDir() {
 		dataDirPending.value = true
 		await loadDataDir()
 	} catch (error) {
-		console.warn('[data-dir] reset failed', error)
+		console.error('[data-dir] reset failed', error)
+		addNotification({
+			type: 'error',
+			title: formatMessage(messages.dataDirSetFailed),
+			text: String(error),
+		})
 	}
 }
 
