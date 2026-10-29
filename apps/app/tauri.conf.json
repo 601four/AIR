@@ -10,9 +10,16 @@
 		"active": true,
 		"category": "Game",
 		"copyright": "",
-		"targets": ["nsis"],
+		"targets": [
+			"nsis"
+		],
 		"externalBin": [],
-		"icon": ["icons/128x128.png", "icons/128x128@2x.png", "icons/icon.icns", "icons/icon.ico"],
+		"icon": [
+			"icons/128x128.png",
+			"icons/128x128@2x.png",
+			"icons/icon.icns",
+			"icons/icon.ico"
+		],
 		"windows": {
 			"nsis": {
 				"installMode": "currentUser",
@@ -50,10 +57,13 @@
 		},
 		"fileAssociations": [
 			{
-				"ext": ["mrpack"],
+				"ext": [
+					"mrpack"
+				],
 				"mimeType": "application/x-modrinth-modpack+zip"
 			}
-		]
+		],
+		"createUpdaterArtifacts": true
 	},
 	"productName": "AirCore",
 	"version": "../app-frontend/package.json",
@@ -62,7 +72,9 @@
 	"plugins": {
 		"deep-link": {
 			"desktop": {
-				"schemes": ["aircore"]
+				"schemes": [
+					"aircore"
+				]
 			},
 			"mobile": []
 		},
@@ -105,12 +117,20 @@
 				],
 				"enable": true
 			},
-			"capabilities": ["core", "plugins"],
+			"capabilities": [
+				"core",
+				"plugins"
+			],
 			"dangerousDisableAssetCspModification": true,
 			"csp": {
 				"default-src": "'self' customprotocol: asset: ext: http://ext.localhost",
 				"connect-src": "ipc: http://ipc.localhost https://modrinth.com https://*.modrinth.com https://*.nodes.modrinth.com https://*.sentry.io https://api.mclo.gs http://textures.minecraft.net https://textures.minecraft.net https://js.stripe.com https://*.stripe.com wss://*.stripe.com https://*.intercom.io wss://*.intercom.io https://*.intercomcdn.com https://www.intercom-reporting.com https://app.getsentry.com wss://*.nodes.modrinth.com https://*.taila228c5.ts.net https://*.taila228c5.ts.net wss://*.taila228c5.ts.net https://fill.papermc.io https://api.purpurmc.org 'self' data: blob:",
-				"font-src": ["https://cdn.modrinth.com/fonts/", "https://js.intercomcdn.com", "ext:", "http://ext.localhost"],
+				"font-src": [
+					"https://cdn.modrinth.com/fonts/",
+					"https://js.intercomcdn.com",
+					"ext:",
+					"http://ext.localhost"
+				],
 				"img-src": "https: 'unsafe-inline' 'self' asset: ext: http://ext.localhost http://asset.localhost http://textures.minecraft.net blob: data:",
 				"style-src": "'unsafe-inline' 'self' ext: http://ext.localhost",
 				"script-src": "ext: http://ext.localhost blob: 'wasm-unsafe-eval' 'unsafe-inline' https://js.stripe.com https://widget.intercom.io https://js.intercomcdn.com https://tally.so/widgets/embed.js 'self'",
