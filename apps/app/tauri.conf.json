@@ -65,6 +65,12 @@
 				"schemes": ["aircore"]
 			},
 			"mobile": []
+		},
+		"updater": {
+			"endpoints": [
+				"https://github.com/MyNameChenShaoRong/AIR/releases/latest/download/latest.json"
+			],
+			"pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDYwNDAxRjU4QjRENEE2NEYKUldSUHB0UzBXQjlBWUtYc05VVWF2ZzgvYjZjSno0NnpIZWZCN3F2SjIrYmNDalZLYUQ1R1VYVnkK"
 		}
 	},
 	"app": {

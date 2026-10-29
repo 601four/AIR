@@ -2,7 +2,7 @@
 	"name": "@modrinth/app",
 	"scripts": {
 		"tauri": "tauri",
-		"build": "tauri build",
+		"build": "tauri build --features updater",
 		"dev": "tauri dev --features export-app-events",
 		"lint": "cargo clippy --all-targets --features updater",
 		"lint:ancillary": "prettier --check .",

@@ -96,3 +96,6 @@ apps/frontend/src/public/robots.txt
 
 packages/tooling-config/script-utils/import-sort.js
 references/
+
+# 发布时生成的更新描述（上传到 Release，不进仓库）
+latest.json

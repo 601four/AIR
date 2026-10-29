@@ -29,7 +29,8 @@
 		"changelog:combine-for-app": "node scripts/run.mjs build-theseus-release-notes",
 		"scripts": "node scripts/run.mjs",
 		"typecheck": "node scripts/typecheck-regression.mjs",
-		"typecheck:update-baseline": "node scripts/typecheck-regression.mjs --update"
+		"typecheck:update-baseline": "node scripts/typecheck-regression.mjs --update",
+		"release:latest": "node scripts/make-latest-json.mjs"
 	},
 	"devDependencies": {
 		"@clack/prompts": "^1.0.0",
