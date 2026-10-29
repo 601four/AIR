@@ -24,6 +24,14 @@ fn main() {
                     ),
             )
             .plugin(
+                "extensions",
+                InlinedPlugin::new()
+                    .commands(&["extensions_list", "extensions_read", "extensions_remove", "extensions_set_enabled", "extensions_versions", "extensions_storage_get", "extensions_storage_set", "extensions_diagnostics", "plugin_net_fetch", "extensions_read_binary"])
+                    .default_permission(
+                        DefaultPermissionRule::AllowAllCommands,
+                    ),
+            )
+            .plugin(
                 "cache",
                 InlinedPlugin::new()
                     .commands(&[
@@ -386,7 +394,12 @@ fn main() {
                         "progress_bars_list",
                         "get_opening_command",
                         "get_image_thumbnail",
-                    ])
+                    "set_download_source",
+                    "prefs_get_all",
+                    "prefs_set",
+                    "debug_log_append",
+                    "translate_text",
+                ])
                     .default_permission(
                         DefaultPermissionRule::AllowAllCommands,
                     ),

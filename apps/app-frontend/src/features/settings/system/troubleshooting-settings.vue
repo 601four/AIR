@@ -64,7 +64,7 @@ const messages = defineMessages({
 	debugInfoDescription: {
 		id: 'app.settings.resource-management.debug-info.description',
 		defaultMessage:
-			'Export app logs and diagnostic data to a ZIP file to share with Modrinth support.',
+			'Export app logs and diagnostic data to a ZIP file to share with AirCore support.',
 	},
 	exportDebugInfo: {
 		id: 'app.settings.resource-management.debug-info.export',
@@ -77,7 +77,7 @@ const messages = defineMessages({
 	reportAdDescription: {
 		id: 'app.settings.troubleshooting.report-ad.description',
 		defaultMessage:
-			"Seen an inappropriate or offensive ad? Copy its details while it's showing and send them to <support>Modrinth Support</support>. We'll review it and remove it.",
+			"Seen an inappropriate or offensive ad? Copy its details while it's showing and send them to <support>AirCore Support</support>. We'll review it and remove it.",
 	},
 	copyAdDetails: {
 		id: 'app.settings.troubleshooting.report-ad.copy',
@@ -231,31 +231,31 @@ async function handleCopyAdDetails() {
 				@proceed="clearCache"
 			/>
 			<h2 class="m-0 text-lg font-semibold text-contrast">
-				{{ formatMessage(messages.appCacheTitle) }}
+				{{ formatMessage(messages.appCacheTitle) }} <!-- 显示：App缓存 -->
 			</h2>
 			<Button id="clear-cache" class="w-fit" @click="handleClearCacheClick">
 				<TrashIcon aria-hidden="true" />
-				{{ formatMessage(messages.clearCache) }}
+				{{ formatMessage(messages.clearCache) }} <!-- 显示：清除缓存 -->
 			</Button>
 			<p class="m-0 leading-tight text-secondary">
-				{{ formatMessage(messages.appCacheDescription) }}
+				{{ formatMessage(messages.appCacheDescription) }} <!-- 显示：清除缓存数据，然后从Modrinth重新下载。在缓存重建之前，应用加载可能会更慢。 -->
 			</p>
 		</div>
 		<div class="flex flex-col gap-2.5">
 			<h2 class="m-0 text-lg font-semibold text-contrast">
-				{{ formatMessage(messages.appDatabaseBackupsTitle) }}
+				{{ formatMessage(messages.appDatabaseBackupsTitle) }} <!-- 显示：应用数据库备份 -->
 			</h2>
 			<Button id="open-db-backups-folder" class="w-fit" @click="openDbBackupsFolder">
 				<FolderOpenIcon aria-hidden="true" />
-				{{ formatMessage(messages.openBackupsFolder) }}
+				{{ formatMessage(messages.openBackupsFolder) }} <!-- 显示：打开备份文件夹 -->
 			</Button>
 			<p class="m-0 leading-tight text-secondary">
-				{{ formatMessage(messages.appDatabaseBackupsDescription) }}
+				{{ formatMessage(messages.appDatabaseBackupsDescription) }} <!-- 显示：这里存储了重要的应用数据的备份，以备日后需要恢复。 -->
 			</p>
 		</div>
 		<div class="flex flex-col gap-2.5">
 			<h2 class="m-0 text-lg font-semibold text-contrast">
-				{{ formatMessage(messages.debugInfoTitle) }}
+				{{ formatMessage(messages.debugInfoTitle) }} <!-- 显示：调试信息 -->
 			</h2>
 			<Button
 				id="export-debug-info"
@@ -270,15 +270,15 @@ async function handleCopyAdDetails() {
 					aria-hidden="true"
 				/>
 				<DownloadIcon v-else aria-hidden="true" />
-				{{ formatMessage(messages.exportDebugInfo) }}
+				{{ formatMessage(messages.exportDebugInfo) }} <!-- 显示：导出调试信息 -->
 			</Button>
 			<p class="m-0 leading-tight text-secondary">
-				{{ formatMessage(messages.debugInfoDescription) }}
+				{{ formatMessage(messages.debugInfoDescription) }} <!-- 显示：导出应用日志和诊断数据到 ZIP 文件用于与 AirCore 支持共享。 -->
 			</p>
 		</div>
 		<div class="flex flex-col gap-2.5">
 			<h2 class="m-0 text-lg font-semibold text-contrast">
-				{{ formatMessage(messages.reportAdTitle) }}
+				{{ formatMessage(messages.reportAdTitle) }} <!-- 显示：举报广告 -->
 			</h2>
 			<Button
 				id="copy-ad-details"
@@ -312,10 +312,10 @@ async function handleCopyAdDetails() {
 		<div class="flex items-center justify-between gap-4">
 			<div>
 				<h2 class="m-0 text-lg font-semibold text-contrast">
-					{{ formatMessage(messages.alwaysShowCopyDetailsTitle) }}
+					{{ formatMessage(messages.alwaysShowCopyDetailsTitle) }} <!-- 显示：始终显示复制详情 -->
 				</h2>
 				<p class="m-0 mt-1">
-					{{ formatMessage(messages.alwaysShowCopyDetailsDescription) }}
+					{{ formatMessage(messages.alwaysShowCopyDetailsDescription) }} <!-- 显示：在安装排队或运行时显示“复制详细信息”选项。对于失败或中断的安装，该选项始终可用。 -->
 				</p>
 			</div>
 			<Toggle

@@ -601,11 +601,31 @@ export async function get_pack_export_candidates(
 
 // Run Minecraft using an instance
 // Returns PID of child
+export interface LaunchOverrides {
+	username?: string
+	uuid?: string
+	accessToken?: string
+	skipSessionJoin?: boolean
+	extraJvmArgs?: string[]
+}
+
 export async function run(
 	instanceId: string,
 	serverAddress: string | null = null,
+	overrides: LaunchOverrides | null = null,
 ): Promise<unknown> {
-	return await invoke('plugin:instance|instance_run', { instanceId, serverAddress })
+	// 启动前内存优化：让系统回收启动器自身的冷页，给游戏让出内存
+	try {
+		const { isPrelaunchOptimizeEnabled, runMemoryOptimize } = await import(
+			'@/composables/use-memory-settings'
+		)
+		if (isPrelaunchOptimizeEnabled()) {
+			await runMemoryOptimize()
+		}
+	} catch {
+		// 优化失败不影响启动
+	}
+	return await invoke('plugin:instance|instance_run', { instanceId, serverAddress, overrides })
 }
 
 export async function kill(instanceId: string): Promise<void> {

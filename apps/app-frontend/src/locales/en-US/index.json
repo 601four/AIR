@@ -78,7 +78,7 @@
     "message": "Minecraft setup failed"
   },
   "app.action-bar.install.summary.modrinth-unreachable": {
-    "message": "Couldn't reach Modrinth"
+    "message": "Couldn't reach AirCore"
   },
   "app.action-bar.install.summary.no-write-permission": {
     "message": "No permission to write"
@@ -135,7 +135,7 @@
     "message": "Accept all"
   },
   "app.ads-consent.body": {
-    "message": "Ads make Modrinth possible and fund creator payouts. Our partners may store or access cookies in the app to personalize ads and measure performance."
+    "message": "Ads make AirCore possible and fund creator payouts. Our partners may store or access cookies in the app to personalize ads and measure performance."
   },
   "app.ads-consent.manage": {
     "message": "Manage preferences"
@@ -144,7 +144,7 @@
     "message": "Reject all"
   },
   "app.ads-consent.title": {
-    "message": "Your privacy and how ads support Modrinth"
+    "message": "Your privacy and how ads support AirCore"
   },
   "app.appearance-settings.compact-mode.description": {
     "message": "Display library instances in a compact row layout."
@@ -165,7 +165,7 @@
     "message": "Hide nametag"
   },
   "app.appearance-settings.minimize-launcher.description": {
-    "message": "Minimize Modrinth App when Minecraft starts."
+    "message": "Minimize AirCore when Minecraft starts."
   },
   "app.appearance-settings.minimize-launcher.title": {
     "message": "Minimize app"
@@ -189,7 +189,7 @@
     "message": "Hide right sidebar"
   },
   "app.appearance-settings.unknown-pack-warning.description": {
-    "message": "Show a safety warning before installing a Modrinth Pack (.mrpack) that isn't hosted on Modrinth."
+    "message": "Show a safety warning before installing a AirCore Pack (.mrpack) that isn't hosted on Modrinth."
   },
   "app.appearance-settings.unknown-pack-warning.title": {
     "message": "Warn me before installing unknown modpacks"
@@ -207,7 +207,7 @@
     "message": "Home and content"
   },
   "app.behavior-settings.refocus-on-game-close.description": {
-    "message": "Bring Modrinth App to the foreground when Minecraft exits."
+    "message": "Bring AirCore to the foreground when Minecraft exits."
   },
   "app.behavior-settings.refocus-on-game-close.title": {
     "message": "Refocus app when Minecraft closes"
@@ -219,7 +219,7 @@
     "message": "Use these behavior settings everywhere you're signed in. Turn this off to keep separate settings on this device."
   },
   "app.behavior-settings.sync-across-devices.signed-out-tooltip": {
-    "message": "Sign into a Modrinth account to sync settings."
+    "message": "Sign into a AirCore account to sync settings."
   },
   "app.behavior-settings.sync-across-devices.title": {
     "message": "Sync behavior across devices"
@@ -474,7 +474,7 @@
     "message": "Use these feature settings everywhere you're signed in. Turn this off to keep separate settings on this device."
   },
   "app.features-settings.sync-across-devices.signed-out-tooltip": {
-    "message": "Sign into a Modrinth account to sync settings."
+    "message": "Sign into a AirCore account to sync settings."
   },
   "app.features-settings.sync-across-devices.title": {
     "message": "Sync features across devices"
@@ -516,16 +516,16 @@
     "message": "View instance"
   },
   "app.hosting.update-required.description": {
-    "message": "You need to update to use Modrinth Hosting through the Modrinth App"
+    "message": "You need to update to use AirCore Hosting through the AirCore"
   },
   "app.hosting.update-required.download": {
     "message": "Download to update"
   },
   "app.hosting.update-required.rinthbot-alt": {
-    "message": "Excited Modrinth Bot"
+    "message": "Excited AirCore Bot"
   },
   "app.hosting.update-required.title": {
-    "message": "Modrinth App update required"
+    "message": "AirCore update required"
   },
   "app.install.phase.downloading_content": {
     "message": "Downloading content"
@@ -852,13 +852,13 @@
     "message": "Sign in as"
   },
   "app.instance.shared-instance-wrong-account.signed-out-header": {
-    "message": "You need to sign in to Modrinth"
+    "message": "You need to sign in to AirCore"
   },
   "app.instance.shared-instance-wrong-account.user-admonition-body-v2": {
     "message": "to receive updates for this shared instance."
   },
   "app.instance.shared-instance-wrong-account.warning-header": {
-    "message": "You are using the wrong Modrinth account"
+    "message": "You are using the wrong AirCore account"
   },
   "app.instance.shortcut.created": {
     "message": "Shortcut created"
@@ -1284,7 +1284,7 @@
     "message": "Install"
   },
   "app.modal.install-to-play.invite-warning": {
-    "message": "This invite was created by another Modrinth user, not Modrinth. Only accept invites from people you trust."
+    "message": "This invite was created by another AirCore user, not Modrinth. Only accept invites from people you trust."
   },
   "app.modal.install-to-play.invite-warning-with-creator": {
     "message": "This invite was created by <creator>{username}</creator>, not Modrinth. Only accept invites from people you trust."
@@ -1320,7 +1320,7 @@
     "message": "For support requests, contact our <support-link>support team</support-link>. For bug reports, open a <github-link>GitHub issue</github-link>."
   },
   "app.modal.install-to-play.reviewed-files": {
-    "message": "Files that aren't published to Modrinth aren't reviewed."
+    "message": "Files that aren't published to AirCore aren't reviewed."
   },
   "app.modal.install-to-play.shared-instance": {
     "message": "Shared instance"
@@ -1389,10 +1389,10 @@
     "message": "Loading profile..."
   },
   "app.nav.modrinth-account": {
-    "message": "Modrinth account"
+    "message": "AirCore account"
   },
   "app.nav.modrinth-hosting": {
-    "message": "Modrinth Hosting"
+    "message": "AirCore Hosting"
   },
   "app.nav.remove-account": {
     "message": "Remove account"
@@ -1401,13 +1401,13 @@
     "message": "Screenshots"
   },
   "app.nav.sign-in-to-modrinth-account": {
-    "message": "Sign into Modrinth"
+    "message": "Sign into AirCore"
   },
   "app.nav.switch-account": {
     "message": "Switch account"
   },
   "app.nav.upgrade-to-modrinth-plus": {
-    "message": "Upgrade to Modrinth+"
+    "message": "Upgrade to AirCore+"
   },
   "app.nav.view-profile": {
     "message": "View profile"
@@ -1623,7 +1623,7 @@
     "message": "Export ZIP"
   },
   "app.screenshots.selection.global-export-filename": {
-    "message": "Modrinth screenshots.zip"
+    "message": "AirCore screenshots.zip"
   },
   "app.screenshots.selection.instance-export-filename": {
     "message": "{instance} screenshots.zip"
@@ -1653,7 +1653,7 @@
     "message": "Oldest"
   },
   "app.settings.app-version": {
-    "message": "Modrinth App {version}"
+    "message": "AirCore {version}"
   },
   "app.settings.default-instance-options.environment-variables.description": {
     "message": "Environment variables set when launching an instance."
@@ -1920,7 +1920,7 @@
     "message": "Some of your instances cannot use this setting"
   },
   "app.settings.game-options.compatibility.reason.launcher-controlled": {
-    "message": "This setting is managed by Modrinth’s launch settings."
+    "message": "This setting is managed by AirCore’s launch settings."
   },
   "app.settings.game-options.custom-value.placeholder": {
     "message": "Enter a value"
@@ -2754,16 +2754,16 @@
     "message": "macOS"
   },
   "app.settings.privacy.ads-consent.intro": {
-    "message": "Ads make Modrinth possible and fund creator payouts. Our partners may store or access cookies in the app to personalize ads and measure performance. You can opt out or manage your preferences below."
+    "message": "Ads make AirCore possible and fund creator payouts. Our partners may store or access cookies in the app to personalize ads and measure performance. You can opt out or manage your preferences below."
   },
   "app.settings.privacy.discord-rich-presence.description": {
-    "message": "Show Modrinth App as your current activity on Discord. This does not affect Rich Presence added to instances by mods. Requires an app restart."
+    "message": "Show AirCore as your current activity on Discord. This does not affect Rich Presence added to instances by mods. Requires an app restart."
   },
   "app.settings.privacy.discord-rich-presence.title": {
     "message": "Discord Rich Presence"
   },
   "app.settings.privacy.telemetry.description": {
-    "message": "Modrinth collects anonymized analytics and usage data to improve our user experience and customize your experience. By disabling this option, you opt out and your data will no longer be collected."
+    "message": "AirCore collects anonymized analytics and usage data to improve our user experience and customize your experience. By disabling this option, you opt out and your data will no longer be collected."
   },
   "app.settings.privacy.telemetry.title": {
     "message": "Telemetry"
@@ -2796,7 +2796,7 @@
     "message": "Browse for an app directory"
   },
   "app.settings.resource-management.app-directory.description": {
-    "message": "Where Modrinth App stores instances and other files. Changes take effect after restarting the app."
+    "message": "Where AirCore stores instances and other files. Changes take effect after restarting the app."
   },
   "app.settings.resource-management.app-directory.select": {
     "message": "Select a new app directory"
@@ -2805,7 +2805,7 @@
     "message": "App directory"
   },
   "app.settings.resource-management.debug-info.description": {
-    "message": "Export app logs and diagnostic data to a ZIP file to share with Modrinth support."
+    "message": "Export app logs and diagnostic data to a ZIP file to share with AirCore support."
   },
   "app.settings.resource-management.debug-info.export": {
     "message": "Export debug info"
@@ -2991,7 +2991,7 @@
     "message": "These settings changed elsewhere"
   },
   "app.settings.synced-options.game-settings.custom-empty": {
-    "message": "Settings added by mods will appear here after Modrinth finds them in one of your instances."
+    "message": "Settings added by mods will appear here after AirCore finds them in one of your instances."
   },
   "app.settings.synced-options.game-settings.description": {
     "message": "Use the same game options across your instances."
@@ -3171,7 +3171,7 @@
     "message": "Copy ad details"
   },
   "app.settings.troubleshooting.report-ad.description": {
-    "message": "Seen an inappropriate or offensive ad? Copy its details while it's showing and send them to <support>Modrinth Support</support>. We'll review it and remove it."
+    "message": "Seen an inappropriate or offensive ad? Copy its details while it's showing and send them to <support>AirCore Support</support>. We'll review it and remove it."
   },
   "app.settings.troubleshooting.report-ad.no-ad.text": {
     "message": "Wait for the ad to load, then try again."
@@ -3324,13 +3324,13 @@
     "message": "MINECON Earth 2017"
   },
   "app.skins.section.modrinth": {
-    "message": "Modrinth"
+    "message": "AirCore"
   },
   "app.skins.section.modrinth-pride": {
-    "message": "Modrinth Pride"
+    "message": "AirCore Pride"
   },
   "app.skins.section.modrinth-pride.tooltip": {
-    "message": "You received these skins for donating to a Modrinth Pride fundraiser during Pride Month."
+    "message": "You received these skins for donating to a AirCore Pride fundraiser during Pride Month."
   },
   "app.skins.section.mounts-of-mayhem": {
     "message": "Mounts of Mayhem"
@@ -3366,10 +3366,10 @@
     "message": "Toggle on"
   },
   "app.survey.body": {
-    "message": "Would you mind answering a few questions about your experience with Modrinth App?"
+    "message": "Would you mind answering a few questions about your experience with AirCore?"
   },
   "app.survey.footer": {
-    "message": "This feedback will go directly to the Modrinth team and help guide future updates!"
+    "message": "This feedback will go directly to the AirCore team and help guide future updates!"
   },
   "app.survey.no-thanks": {
     "message": "No thanks"
@@ -3378,7 +3378,7 @@
     "message": "Take survey"
   },
   "app.survey.title": {
-    "message": "Hey there Modrinth user!"
+    "message": "Hey there AirCore user!"
   },
   "app.sync-instances-update.badge": {
     "message": "New this update"
@@ -3510,13 +3510,13 @@
     "message": "Synced resource packs"
   },
   "app.update-popup.body.download-complete": {
-    "message": "Modrinth App v{version} has finished downloading. Reload to update now, or automatically when you close Modrinth App."
+    "message": "AirCore v{version} has finished downloading. Reload to update now, or automatically when you close AirCore."
   },
   "app.update-popup.body.linux": {
-    "message": "Modrinth App v{version} is available. Use your package manager to update for the latest features and fixes!"
+    "message": "AirCore v{version} is available. Use your package manager to update for the latest features and fixes!"
   },
   "app.update-popup.body.metered": {
-    "message": "Modrinth App v{version} is available now! Since you're on a metered network, we didn't automatically download it."
+    "message": "AirCore v{version} is available now! Since you're on a metered network, we didn't automatically download it."
   },
   "app.update-popup.changelog": {
     "message": "Changelog"
@@ -3561,7 +3561,7 @@
     "message": "Press <shortcut>N</shortcut> to quick create an instance"
   },
   "app.welcome-screen.title": {
-    "message": "Welcome to Modrinth"
+    "message": "Welcome to AirCore"
   },
   "app.world.server-modal.placeholder-address": {
     "message": "example.modrinth.gg"
@@ -3580,6 +3580,21 @@
   },
   "app.world.world-item.players-online": {
     "message": "{count} online"
+  },
+  "browse.sort.downloads": {
+    "message": "Downloads"
+  },
+  "browse.sort.follows": {
+    "message": "Followers"
+  },
+  "browse.sort.newest": {
+    "message": "Date published"
+  },
+  "browse.sort.relevance": {
+    "message": "Relevance"
+  },
+  "browse.sort.updated": {
+    "message": "Date updated"
   },
   "content.shared-instance.change-version-body": {
     "message": "Changing the version only changes your local copy. Future shared instance updates may restore or change it again."
@@ -3630,10 +3645,10 @@
     "message": "It may be different from their Minecraft username!"
   },
   "friends.add-friend.username.placeholder": {
-    "message": "Enter Modrinth username..."
+    "message": "Enter AirCore username..."
   },
   "friends.add-friend.username.title": {
-    "message": "What's your friend's Modrinth username?"
+    "message": "What's your friend's AirCore username?"
   },
   "friends.add-friends-to-share": {
     "message": "<link>Add friends</link> to see what they're playing!"
@@ -3678,7 +3693,7 @@
     "message": "{title} - {count}"
   },
   "friends.sign-in-to-add-friends": {
-    "message": "<link>Sign in to a Modrinth account</link> to add friends and see what they're playing!"
+    "message": "<link>Sign in to a AirCore account</link> to add friends and see what they're playing!"
   },
   "installation-settings.shared-instance.linked-title": {
     "message": "Linked shared instance"
@@ -3699,7 +3714,7 @@
     "message": "Unpublish shared instance"
   },
   "installation-settings.shared-instance.unpublish-description": {
-    "message": "Remove this shared instance from Modrinth and stop sending updates to anyone using it. Your local instance will not be affected."
+    "message": "Remove this shared instance from AirCore and stop sending updates to anyone using it. Your local instance will not be affected."
   },
   "installation-settings.shared-instance.unpublishing-button": {
     "message": "Unpublishing..."
@@ -3714,7 +3729,7 @@
     "message": "Unlink shared instance"
   },
   "installation-settings.unpublish-shared-instance.modal.admonition-body": {
-    "message": "This deletes the shared instance from Modrinth's servers. People using it in the Modrinth App will stop receiving updates, but your local instance and its content will stay on this device."
+    "message": "This deletes the shared instance from AirCore's servers. People using it in the AirCore will stop receiving updates, but your local instance and its content will stay on this device."
   },
   "installation-settings.unpublish-shared-instance.modal.admonition-header": {
     "message": "Unpublishing shared instance"
@@ -3999,7 +4014,7 @@
     "message": "TNT"
   },
   "instance.icon-editor.symbol.wrenth-rinth": {
-    "message": "Modrinth Wrench"
+    "message": "AirCore Wrench"
   },
   "instance.icon-editor.symbol.zombie": {
     "message": "Zombie"
@@ -4593,7 +4608,7 @@
     "message": "Create an account"
   },
   "modal.modrinth-account-required.description": {
-    "message": "You'll need to sign into your Modrinth account before you can use this feature."
+    "message": "You'll need to sign into your AirCore account before you can use this feature."
   },
   "modal.modrinth-account-required.header": {
     "message": "Account required"
@@ -4602,10 +4617,10 @@
     "message": "Open browser again"
   },
   "modal.modrinth-account-required.sign-in-button": {
-    "message": "Sign in to Modrinth"
+    "message": "Sign in to AirCore"
   },
   "modal.modrinth-account-required.sign-in-heading": {
-    "message": "Sign in to a Modrinth account"
+    "message": "Sign in to a AirCore account"
   },
   "modal.modrinth-account-required.signing-in-header": {
     "message": "Signing in"
@@ -4623,7 +4638,7 @@
     "message": "Sign in to Minecraft"
   },
   "onboarding-checklist.login-modrinth": {
-    "message": "Sign in to Modrinth"
+    "message": "Sign in to AirCore"
   },
   "onboarding-checklist.title": {
     "message": "Getting started"
@@ -4648,5 +4663,224 @@
   },
   "settings.sidebar.label.display": {
     "message": "Display"
+  },
+  "app.home.select-instance": {
+    "message": "Select instance"
+  },
+  "app.home.launch": {
+    "message": "Play"
+  },
+  "app.home.view-all": {
+    "message": "View all instances"
+  },
+  "app.home.search-instances": {
+    "message": "Search instances"
+  },
+  "app.home.last-played": {
+    "message": "Last played {when}"
+  },
+  "app.home.never-played": {
+    "message": "Never played"
+  },
+  "app.home.cancel": {
+    "message": "Cancel"
+  },
+  "app.home.instance-count": {
+    "message": "{count} instances"
+  },
+  "app.home.greeting.dawn": {
+    "message": "Good night"
+  },
+  "app.home.greeting.morning": {
+    "message": "Good morning"
+  },
+  "app.home.greeting.noon": {
+    "message": "Good afternoon"
+  },
+  "app.home.greeting.afternoon": {
+    "message": "Good afternoon"
+  },
+  "app.home.greeting.evening": {
+    "message": "Good evening"
+  },
+  "app.home.greeting.with-name": {
+    "message": "{greeting}, {name}"
+  },
+  "app.home.stop": {
+    "message": "Stop game"
+  },
+  "app.home.time.just-now": {
+    "message": "just now"
+  },
+  "app.home.time.minutes": {
+    "message": "{count} minutes ago"
+  },
+  "app.home.time.hours": {
+    "message": "{count} hours ago"
+  },
+  "app.home.time.days": {
+    "message": "{count} days ago"
+  },
+  "app.navigation.library": {
+    "message": "Instances"
+  },
+  "app.extensions.reload": {
+    "message": "Reload plugin page"
+  },
+  "app.extensions.not-rendered": {
+    "message": "Plugin page has not rendered yet. If this persists, check the Plugin logs page."
+  },
+  "app.extensions.disabled-title": {
+    "message": "Plugin disabled"
+  },
+  "app.extensions.disabled-body": {
+    "message": "Re-enable it in Settings → Plugins, or uninstall and reinstall."
+  },
+  "app.extensions.not-found-title": {
+    "message": "Plugin not found"
+  },
+  "app.extensions.not-found-body": {
+    "message": "No panel named {id}"
+  },
+  "app.home.launch-failed": {
+    "message": "Failed to launch"
+  },
+  "app.home.stop-failed": {
+    "message": "Failed to stop"
+  },
+  "app.plugins.title": {
+    "message": "Plugins"
+  },
+  "app.plugins.description": {
+    "message": "Plugins are zip files placed in the extensions folder (zip name = plugin id). Total: {count}."
+  },
+  "app.plugins.open-folder": {
+    "message": "Open plugins folder"
+  },
+  "app.plugins.error-title": {
+    "message": "Plugin error"
+  },
+  "app.plugins.empty": {
+    "message": "No plugins installed yet."
+  },
+  "app.plugins.uninstall": {
+    "message": "Uninstall"
+  },
+  "app.plugins.no-config": {
+    "message": "This plugin has no configurable options."
+  },
+  "app.plugins.meta": {
+    "message": "{id} · entry {entry} · API v{version}"
+  },
+  "app.plugins.open-folder-failed": {
+    "message": "Failed to open folder"
+  },
+  "app.plugins.uninstalled": {
+    "message": "Uninstalled"
+  },
+  "app.plugins.saved": {
+    "message": "Plugin settings saved"
+  },
+  "app.plugins.save-failed": {
+    "message": "Failed to save plugin settings"
+  },
+  "app.plugins.list-failed": {
+    "message": "Failed to load plugin list"
+  },
+  "app.plugins.diagnostics-title": {
+    "message": "Skipped plugin files"
+  },
+  "app.skins.tab.saved": {
+    "message": "Your skins"
+  },
+  "app.skins.tab.official": {
+    "message": "Official skins"
+  },
+  "app.home.installing": {
+    "message": "Installing…"
+  },
+  "app.library.empty.title": {
+    "message": "Instance library"
+  },
+  "app.library.empty.body": {
+    "message": "No instances yet. Create one to start playing."
+  },
+  "app.library.empty.create": {
+    "message": "New instance"
+  },
+  "app.accent.title": {
+    "message": "Accent color"
+  },
+  "app.accent.description": {
+    "message": "Changes the launcher's accent color (buttons, selections, loading bar, sidebar gradient). The dark / light / OLED theme itself stays the same."
+  },
+  "app.accent.preset.green": {
+    "message": "Classic green"
+  },
+  "app.accent.preset.blue": {
+    "message": "Sky blue"
+  },
+  "app.accent.preset.pink": {
+    "message": "Cherry pink"
+  },
+  "app.accent.custom": {
+    "message": "Custom"
+  },
+  "app.accent.customLabel": {
+    "message": "Custom accent color"
+  },
+  "app.memory.auto": {
+    "message": "Automatic memory allocation"
+  },
+  "app.memory.autoHint": {
+    "message": "(Recommended from physical memory, currently {mb} MB)"
+  },
+  "app.memory.prelaunch": {
+    "message": "Optimize memory before launch"
+  },
+  "app.memory.prelaunchHint": {
+    "message": "(Asks the system to reclaim the launcher's cold pages before launching; other programs are not touched)"
+  },
+  "app.downloads.sourceTitle": {
+    "message": "Minecraft download source"
+  },
+  "app.downloads.sourceDescription": {
+    "message": "The official source is slow from mainland China. Mirror downloads version manifests, libraries and assets; modpacks and mods are not affected."
+  },
+  "app.downloads.sourceOfficial": {
+    "message": "Official (Mojang, slow in China)"
+  },
+  "app.downloads.sourceMirror": {
+    "message": "Mirror (BMCLAPI)"
+  },
+  "app.downloads.concurrentHint": {
+    "message": "Auto-tuned between 8 and 96 based on bandwidth; this is the initial value."
+  },
+  "app.navigation.pluginLogs": {
+    "message": "Plugin logs (developer)"
+  },
+  "app.plugins.notificationTitle": {
+    "message": "Plugins"
+  },
+  "app.project.translate": {
+    "message": "Translate"
+  },
+  "app.project.showOriginal": {
+    "message": "Show original"
+  },
+  "app.project.translating": {
+    "message": "Translating…"
+  },
+  "app.project.translateFailed": {
+    "message": "Translation failed"
+  },
+  "app.memory.optimizeNow": {
+    "message": "Optimize now"
+  },
+  "app.memory.optimizeResult": {
+    "message": "Released {freed} MB · available {available} MB · trimmed {processes} processes"
+  },
+  "app.library.empty.none": {
+    "message": "No instances yet"
   }
 }

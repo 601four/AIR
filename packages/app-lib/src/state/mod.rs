@@ -140,6 +140,7 @@ impl State {
             Err(error) => StartupPhase::Failed(format!("{error:#}")),
         });
         let state = result?;
+        crate::util::fetch::spawn_adaptive_concurrency();
 
         if state
             .startup_complete
@@ -327,8 +328,11 @@ impl State {
         tracing::info!("Fetching app settings");
         let mut settings = Settings::get(&pool).await?;
 
-        let fetch_semaphore =
-            FetchSemaphore(Semaphore::new(settings.max_concurrent_downloads));
+        // 初始并发：至少 32，不低于用户设置
+        let initial_downloads = settings.max_concurrent_downloads.max(32);
+        crate::util::fetch::DOWNLOAD_CONCURRENCY
+            .store(initial_downloads, std::sync::atomic::Ordering::Relaxed);
+        let fetch_semaphore = FetchSemaphore(Semaphore::new(initial_downloads));
         let io_semaphore =
             IoSemaphore(Semaphore::new(settings.max_concurrent_writes));
         let api_semaphore =

@@ -3,8 +3,10 @@ import { ModrinthApiError } from '@modrinth/api-client'
 import {
 	ArrowBigUpDashIcon,
 	ArrowLeftRightIcon,
+	BoxesIcon,
 	CompassIcon,
 	ImageIcon,
+	LibraryIcon,
 	LogInIcon,
 	LogOutIcon,
 	PlayIcon,
@@ -59,13 +61,13 @@ import { openUrl } from '@tauri-apps/plugin-opener'
 import { type } from '@tauri-apps/plugin-os'
 import { saveWindowState, StateFlags } from '@tauri-apps/plugin-window-state'
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
+import SandboxHost from '@/components/ui/SandboxHost.vue'
 import { RouterView, useRoute, useRouter } from 'vue-router'
 
 import { useRouteLoading } from '@/app/runtime/use-route-loading'
 import AppSidebar from '@/app/shell/sidebar/index.vue'
 import AppTitleBar from '@/app/shell/title-bar/index.vue'
 import ErrorModal from '@/components/ui/ErrorModal.vue'
-import HostingUpdateRequired from '@/components/ui/HostingUpdateRequired.vue'
 import AddServerToInstanceModal from '@/components/ui/install_flow/AddServerToInstanceModal.vue'
 import UnknownPackWarningModal from '@/components/ui/install_flow/UnknownPackWarningModal.vue'
 import IconEditorModal from '@/components/ui/instance_settings/icon-editor-modal/index.vue'
@@ -82,6 +84,18 @@ import SplashScreen from '@/components/ui/SplashScreen.vue'
 import SurveyPopup from '@/components/ui/SurveyPopup.vue'
 import { useCheckDisableMouseover } from '@/composables/macCssFix.js'
 import { useAppEvent } from '@/composables/use-app-event'
+import { applyAccentColor, useAccentColor } from '@/composables/use-accent-color'
+import {
+	installPluginHost,
+	setHostNotifier,
+	isNavHidden,
+	pluginRegistry,
+	startPluginHotReload,
+	pluginState,
+	pluginToasts,
+	registerSandboxNav,
+} from '@/plugin-host'
+import PluginDiagnostics from '@/components/ui/PluginDiagnostics.vue'
 import { useAppSettings } from '@/composables/use-app-settings.ts'
 import { useError } from '@/composables/use-error.js'
 import { useInstanceMetadataRefresh } from '@/composables/use-instance-metadata-refresh'
@@ -233,13 +247,87 @@ const forceSidebar = computed(
 		route.path.startsWith('/user'),
 )
 const sidebarVisible = computed(() => sidebarToggled.value || forceSidebar.value)
-const hostingRouteActive = computed(() => route.path.startsWith('/hosting'))
-const hostingUpdateRequired = computed(
-	() =>
-		hostingRouteActive.value &&
-		!!appUpdateState.availableUpdate.value &&
-		appUpdateState.updatesEnabled.value,
-)
+
+const viewportEl = ref()
+const sidebarAnimation = ref()
+const viewportAnimation = ref()
+
+const SIDEBAR_ANIM_MS = 220
+const SIDEBAR_EASE = 'cubic-bezier(0.32, 0.72, 0, 1)'
+
+/** 不带动画地直接应用状态（启动时用，避免初始错位） */
+function applySidebarState(open) {
+	sidebarAnimation.value?.cancel?.()
+	viewportAnimation.value?.cancel?.()
+	const sidebarEl = sidebar.value?.$el
+	if (sidebarEl) sidebarEl.style.transform = open ? 'translateX(0)' : 'translateX(100%)'
+}
+
+/** 带动画的展开/收起，支持中途反转 */
+function animateSidebarWithWaapi(open) {
+	const sidebarEl = sidebar.value?.$el
+	if (sidebarEl) {
+		const currentTransform = getComputedStyle(sidebarEl).transform
+		sidebarAnimation.value?.cancel?.()
+		sidebarAnimation.value = sidebarEl.animate(
+			[
+				{ transform: currentTransform && currentTransform !== 'none' ? currentTransform : 'translateX(0)' },
+				{ transform: open ? 'translateX(0)' : 'translateX(100%)' },
+			],
+			{ duration: SIDEBAR_ANIM_MS, easing: SIDEBAR_EASE, fill: 'forwards' },
+		)
+	}
+
+
+}
+
+watch(sidebarVisible, (visible) => {
+	// 切换瞬间暂停内容区的 CSS 过渡，避免卡片随宽度变化被“滑动缩放”
+	document.body.classList.add('sidebar-resizing')
+	animateSidebarWithWaapi(visible)
+	setTimeout(() => {
+		document.body.classList.remove('sidebar-resizing')
+	}, 120)
+})
+
+onMounted(() => {
+	nextTick(() => applySidebarState(sidebarVisible.value))
+
+	// 临时调试：把所有可滚动元素标色，用于定位重叠的滚动条
+	// 仅开发者模式 + 开发构建下才显示滚动区域标色
+	if (import.meta.env.DEV && appSettings.devMode) {
+		setTimeout(() => {
+			const colors = ['red', 'lime', 'cyan', 'magenta', 'orange', 'yellow']
+			let index = 0
+			document.querySelectorAll('*').forEach((element) => {
+				if (!(element instanceof HTMLElement)) return
+				const style = getComputedStyle(element)
+				const scrollable =
+					(style.overflowY === 'auto' || style.overflowY === 'scroll' || style.overflowY === 'overlay') &&
+					element.scrollHeight > element.clientHeight + 4
+				if (!scrollable) return
+				element.style.outline = `2px solid ${colors[index % colors.length]}`
+				element.style.outlineOffset = '-2px'
+				console.log(
+					'[scroll-debug]',
+					colors[index % colors.length],
+					element.className,
+					`scrollHeight=${element.scrollHeight} clientHeight=${element.clientHeight}`,
+				)
+				index++
+			})
+		}, 2500)
+	}
+})
+
+// 由路由（如进入发现页）强制展开侧栏时，直接显示，不播动画
+
+
+// 侧栏展开/收起期间，内容区轻微淡化，掩盒卡片重排的视觉跳变
+let sidebarShiftTimer = undefined
+// 去商业化：托管功能已移除，这两个状态恒为 false
+const hostingRouteActive = computed(() => false)
+const hostingUpdateRequired = computed(() => false)
 const hostingIntercomIdentityKey = computed(() => {
 	const rawServerId = route.params.id
 	const serverId = Array.isArray(rawServerId) ? rawServerId[0] : rawServerId
@@ -450,16 +538,16 @@ const authServerQuery = useQuery({
 		authUnreachableDebug('Auth servers are reachable')
 		return true
 	},
+	enabled: false, // 去商业化：不再检查 Modrinth 认证服务器
 	refetchInterval: 5 * 60 * 1000, // 5 minutes
 	retry: false,
 	refetchOnWindowFocus: false,
 })
 
+// 去商业化：Modrinth 登录已移除，这个"身份验证服务器连不上"的检查会把整个界面
+// 替换成一条警告（因为它在模板里用的是 v-else 链），国内网络不稳时就会白屏。
+// 现在恒为 false，检查逻辑本身保留但不再影响界面。
 const authUnreachable = computed(() => {
-	if (authServerQuery.isError.value && !authServerQuery.isLoading.value) {
-		console.warn('Failed to reach auth servers', authServerQuery.error.value)
-		return true
-	}
 	return false
 })
 
@@ -470,7 +558,168 @@ function handleEditMenuAction(action) {
 	if (document.dispatchEvent(event)) document.execCommand(action)
 }
 
+onMounted(() => {
+})
+
+// ResizeObserver 的循环告警属于噪音，不上报
+function isResizeObserverNoise(value) {
+	const text = value instanceof Error ? value.message : String(value ?? '')
+	return text.includes('ResizeObserver loop')
+}
+
+window.addEventListener('unhandledrejection', (event) => {
+	if (isResizeObserverNoise(event.reason)) return
+	console.error('[UNHANDLED-REJECTION]', event.reason?.stack || event.reason)
+})
+
+window.addEventListener('error', (event) => {
+	if (isResizeObserverNoise(event.error ?? event.message)) return
+	console.error('[UNCAUGHT-ERROR]', event.error?.stack || event.message)
+})
+
+// 本地开发时的前端日志采集：把 console.warn/error 和未捕获异常写到
+// %APPDATA%/com.aircore.launcher/logs/webview.log，方便排查问题
+function installConsoleLogCapture() {
+	if (!import.meta.env.DEV) return
+	const queue = []
+	let flushTimer
+	let dropped = 0
+
+	const flush = () => {
+		flushTimer = undefined
+		if (queue.length === 0) return
+		const text = queue.splice(0, queue.length).join('\n') + '\n'
+		void invoke('plugin:utils|debug_log_append', { lines: text }).catch(() => {})
+		if (dropped > 0) {
+			console.warn('[console-capture] dropped ' + dropped + ' duplicated lines')
+			dropped = 0
+		}
+	}
+
+	// 安装完立即写一行，用来确认钩子是否生效
+	queue.push(new Date().toISOString() + ' [capture] installed')
+	flushTimer = setTimeout(flush, 300)
+
+	const push = (level, args) => {
+		try {
+			const text = args
+				.map((arg) => {
+					if (arg instanceof Error) return arg.stack ?? arg.message
+					if (typeof arg === 'string') return arg
+					try {
+						return JSON.stringify(arg)
+					} catch {
+						return String(arg)
+					}
+				})
+				.join(' ')
+			if (queue.length > 500) {
+				dropped += 1
+				return
+			}
+			queue.push(new Date().toISOString() + ' [' + level + '] ' + text)
+			if (!flushTimer) flushTimer = setTimeout(flush, 500)
+		} catch {
+			// ignore
+		}
+	}
+
+	const originalWarn = console.warn.bind(console)
+	const originalError = console.error.bind(console)
+	console.warn = (...args) => {
+		push('warn', args)
+		originalWarn(...args)
+	}
+	console.error = (...args) => {
+		push('error', args)
+		originalError(...args)
+	}
+	window.addEventListener('error', (event) => {
+		push('uncaught', [event.error ?? event.message])
+	})
+	window.addEventListener('unhandledrejection', (event) => {
+		push('rejection', [event.reason])
+	})
+	window.addEventListener('beforeunload', () => flush())
+}
+
+// 立即安装：模块加载时就开始捕获，能收到首屏渲染期间的警告
+installConsoleLogCapture()
+
 onMounted(async () => {
+	// 先把数据库里的 AirCore 偏好回填到本地缓存
+	try {
+		const { hydratePrefs } = await import('@/composables/use-prefs')
+		await hydratePrefs()
+	} catch {
+		// 忽略
+	}
+
+	// 启动时恢复 Minecraft 下载源设置
+	try {
+		const source = localStorage.getItem('aircore-download-source') ?? 'official'
+		void invoke('plugin:utils|set_download_source', { source })
+	} catch {
+		// 忽略
+	}
+
+	// 恢复强调色
+	try {
+		const { applyAccentColor } = await import('@/composables/use-accent-color')
+		const color = localStorage.getItem('aircore-accent-color')
+		if (color) applyAccentColor(color)
+	} catch {
+		// 忽略
+	}
+
+	// 插件宿主：暴露 Vue / UI 组件库，并加载已安装的插件
+	// 把真正的错误堆栈打印出来，便于定位白屏原因
+	installPluginHost()
+	// 插件被卸下时，如果正停在它的页面上，自动回首页
+	window.addEventListener('aircore:plugin-unloaded', (event) => {
+		const pluginId = event.detail
+		if (route.path === `/ext/${pluginId}`) void router.replace('/')
+	})
+	// 把启动器自己的通知系统交给插件，避免两套通知重叠
+	setHostNotifier((message, type) => {
+		const manager = notificationManager
+		if (!manager?.addNotification) return
+		manager.addNotification({
+			type: type === 'error' ? 'error' : type === 'warning' ? 'warning' : 'info',
+			title: formatMessage(messages.pluginsNotification),
+			text: message,
+		})
+	})
+	try {
+		const extensions = await invoke('plugin:extensions|extensions_list')
+		pluginState.extensions = extensions ?? []
+		for (const extension of extensions ?? []) {
+			if (extension.enabled === false) {
+				continue
+			}
+			// 完全沙箱：插件必须是 index.html，不再将 JS 直接注入主页面
+			if (!(extension.entry ?? '').endsWith('.html')) {
+				pluginState.error = `插件 ${extension.id} 的入口不是 index.html，沙箱模式下不会加载`
+				logPlugin('非沙箱插件已跳过', 'warn', extension.id)
+				continue
+			}
+			registerSandboxNav(extension)
+		}
+		void startPluginHotReload(() =>
+			invoke('plugin:extensions|extensions_versions'),
+		)
+	} catch (error) {
+		pluginState.error = `读取插件列表失败: ${String(error)}`
+		console.warn('[plugins] 列凐扩展失败', error)
+	}
+	if (!pluginRegistry.panels.some((panel) => panel.id === '__plugins')) {
+		pluginRegistry.panels.push({
+			id: '__plugins',
+			title: '插件诊断',
+			component: PluginDiagnostics,
+		})
+	}
+
 	try {
 		const listeners = await Promise.all([
 			listen('edit-menu://undo', () => handleEditMenuAction('undo')),
@@ -512,9 +761,20 @@ onUnmounted(async () => {
 })
 
 const { formatMessage } = useVIntl()
+
+// 自定义强调色：启动时应用，主题切换时重新应用
+const accentColorState = useAccentColor()
+applyAccentColor(accentColorState.accentColor.value)
+watch(
+	() => appTheme.active,
+	() => applyAccentColor(accentColorState.accentColor.value),
+)
 const formatBytes = useFormatBytes()
 
 const messages = defineMessages({
+	pluginLogs: { id: 'app.navigation.pluginLogs', defaultMessage: 'Plugin logs (developer)' },
+	libraryLabel: { id: 'app.navigation.library', defaultMessage: 'Instances' },
+	pluginsNotification: { id: 'app.plugins.notificationTitle', defaultMessage: 'Plugins' },
 	warning: { id: 'app.notification.warning', defaultMessage: 'Warning' },
 	updateDownloadMissingVersion: {
 		id: 'app.update.download-error.missing-version',
@@ -539,12 +799,12 @@ const messages = defineMessages({
 	},
 	adsConsentTitle: {
 		id: 'app.ads-consent.title',
-		defaultMessage: 'Your privacy and how ads support Modrinth',
+		defaultMessage: 'Your privacy and how ads support AirCore',
 	},
 	adsConsentBody: {
 		id: 'app.ads-consent.body',
 		defaultMessage:
-			'Ads make Modrinth possible and fund creator payouts. Our partners may store or access cookies in the app to personalize ads and measure performance.',
+			'Ads make AirCore possible and fund creator payouts. Our partners may store or access cookies in the app to personalize ads and measure performance.',
 	},
 	adsConsentManage: {
 		id: 'app.ads-consent.manage',
@@ -564,7 +824,7 @@ const messages = defineMessages({
 	},
 	modrinthHosting: {
 		id: 'app.nav.modrinth-hosting',
-		defaultMessage: 'Modrinth Hosting',
+		defaultMessage: 'AirCore Hosting',
 	},
 	screenshots: {
 		id: 'app.nav.screenshots',
@@ -576,7 +836,7 @@ const messages = defineMessages({
 	},
 	modrinthAccount: {
 		id: 'app.nav.modrinth-account',
-		defaultMessage: 'Modrinth account',
+		defaultMessage: 'AirCore account',
 	},
 	viewProfile: {
 		id: 'app.nav.view-profile',
@@ -588,7 +848,7 @@ const messages = defineMessages({
 	},
 	signInToModrinthAccount: {
 		id: 'app.nav.sign-in-to-modrinth-account',
-		defaultMessage: 'Sign into Modrinth',
+		defaultMessage: 'Sign into AirCore',
 	},
 	loadingProfile: {
 		id: 'app.nav.loading-profile',
@@ -612,7 +872,7 @@ const messages = defineMessages({
 	},
 	upgradeToModrinthPlus: {
 		id: 'app.nav.upgrade-to-modrinth-plus',
-		defaultMessage: 'Upgrade to Modrinth+',
+		defaultMessage: 'Upgrade to AirCore+',
 	},
 })
 
@@ -677,9 +937,6 @@ async function setupApp() {
 		hide_nametag_skins_page,
 		advanced_rendering,
 		toggle_sidebar,
-		sync_theme_across_devices,
-		sync_behavior_across_devices,
-		sync_features_across_devices,
 		show_files_tab_in_instances,
 		show_worlds_tab_in_instances,
 		show_screenshots_tab_in_instances,
@@ -728,9 +985,6 @@ async function setupApp() {
 
 	appTheme.preferred = theme
 	appTheme.advancedRendering = advanced_rendering
-	appTheme.syncAcrossDevices = sync_theme_across_devices
-	appSettings.syncBehaviorAcrossDevices = sync_behavior_across_devices
-	appSettings.syncFeaturesAcrossDevices = sync_features_across_devices
 	appSettings.hideNametagSkinsPage = hide_nametag_skins_page
 	appSettings.toggleSidebar = toggle_sidebar
 	appSettings.showFilesTabInInstances = show_files_tab_in_instances
@@ -999,98 +1253,21 @@ watch(
 				if (userId) {
 					rememberAccountAppearance(userId, preferences.appearance)
 				}
-				if (appTheme.syncAcrossDevices && isDarkTheme(preferences.appearance.theme)) {
-					appTheme.preferredDark = preferences.appearance.theme
-				}
 				const locale = preferences.localization.locale
 				const behavior = preferences.behavior
 				let settingsChanged = false
 
-				if (appTheme.syncAcrossDevices && appTheme.preferred !== selectedTheme) {
-					appTheme.preferred = selectedTheme
-				}
 				if (i18n.global.locale.value !== locale) {
 					await setLocale(locale)
 				}
 
-				if (appTheme.syncAcrossDevices && settings.theme !== selectedTheme) {
-					settings.theme = selectedTheme
-					settingsChanged = true
-				}
 				if (settings.locale !== locale) {
 					settings.locale = locale
 					settingsChanged = true
 				}
 
-				if (behavior && appSettings.syncBehaviorAcrossDevices) {
-					const behaviorSettings = {
-						refocus_on_game_close: 'refocusOnGameClose',
-						compact_instance_cards: 'compactInstanceCards',
-						show_play_time: 'showPlayTime',
-						warn_on_unknown_modpacks: 'warnOnUnknownModpacks',
-						skip_non_essential_warnings: 'skipNonEssentialWarnings',
-					}
-					for (const [key, stateKey] of Object.entries(behaviorSettings)) {
-						const value = behavior[key] ?? settings[key]
-						appSettings[stateKey] = value
-						if (settings[key] !== value) {
-							settings[key] = value
-							settingsChanged = true
-						}
-					}
 
-					appSettings.toggleSidebar = behavior.hide_right_sidebar
-					appSettings.hideNametagSkinsPage = behavior.hide_nametag
 
-					if (settings.hide_on_process_start !== behavior.minimize_app) {
-						settings.hide_on_process_start = behavior.minimize_app
-						settingsChanged = true
-					}
-					if (settings.toggle_sidebar !== behavior.hide_right_sidebar) {
-						settings.toggle_sidebar = behavior.hide_right_sidebar
-						settingsChanged = true
-					}
-					if (settings.hide_nametag_skins_page !== behavior.hide_nametag) {
-						settings.hide_nametag_skins_page = behavior.hide_nametag
-						settingsChanged = true
-					}
-				}
-
-				if (behavior && appSettings.syncFeaturesAcrossDevices) {
-					const featureSettings = {
-						show_jump_in: 'showJumpIn',
-						show_files_tab_in_instances: 'showFilesTabInInstances',
-						show_worlds_tab_in_instances: 'showWorldsTabInInstances',
-						show_screenshots_tab_in_instances: 'showScreenshotsTabInInstances',
-						show_skin_selector_in_sidebar: 'showSkinSelectorInSidebar',
-					}
-					for (const [key, stateKey] of Object.entries(featureSettings)) {
-						const value = behavior[key] ?? settings[key]
-						appSettings[stateKey] = value
-						if (settings[key] !== value) {
-							settings[key] = value
-							settingsChanged = true
-						}
-					}
-					if (typeof behavior.quick_instance_count === 'number') {
-						quickInstances.setLimit(behavior.quick_instance_count)
-					}
-
-					const showAllScreenshots = behavior.show_all_screenshots
-					if (typeof showAllScreenshots === 'boolean') {
-						const globalSyncedOptions =
-							globalSyncedOptionsQuery.data.value ??
-							(await queryClient.fetchQuery(globalSyncedOptionsQueryOptions()))
-						if (globalSyncedOptions.screenshots !== showAllScreenshots) {
-							const updatedGlobalSyncedOptions = await set_global_synced_option(
-								'screenshots',
-								showAllScreenshots,
-							)
-							queryClient.setQueryData(syncedOptionsKeys.global, updatedGlobalSyncedOptions)
-							await queryClient.invalidateQueries({ queryKey: screenshotKeys.all })
-						}
-					}
-				}
 
 				if (settingsChanged) {
 					await setSettings(settings)
@@ -1509,7 +1686,8 @@ async function handleCommand(e) {
 		if (e.path.endsWith('.mrpack')) {
 			const location = { type: 'fromFile', path: e.path }
 			const preview = await install_get_modpack_preview(location).catch(handleError)
-			if (preview?.unknownFile || preview?.externalFilesInModpack.length > 0) {
+			if (false) {
+				// 去商业化：不再提示“非 AirCore 托管的整合包”（本项目没有托管服务）
 				const splitPath = e.path.split(/[\\/]/)
 				const fileName = splitPath ? splitPath[splitPath.length - 1] : e.path
 				unknownPackWarningModal.value?.show(
@@ -1584,16 +1762,16 @@ const updatePopupMessages = defineMessages({
 	},
 	meteredBody: {
 		id: 'app.update-popup.body.metered',
-		defaultMessage: `Modrinth App v{version} is available now! Since you're on a metered network, we didn't automatically download it.`,
+		defaultMessage: `AirCore v{version} is available now! Since you're on a metered network, we didn't automatically download it.`,
 	},
 	downloadedBody: {
 		id: 'app.update-popup.body.download-complete',
-		defaultMessage: `Modrinth App v{version} has finished downloading. Reload to update now, or automatically when you close Modrinth App.`,
+		defaultMessage: `AirCore v{version} has finished downloading. Reload to update now, or automatically when you close AirCore.`,
 	},
 	linuxBody: {
 		id: 'app.update-popup.body.linux',
 		defaultMessage:
-			'Modrinth App v{version} is available. Use your package manager to update for the latest features and fixes!',
+			'AirCore v{version} is available. Use your package manager to update for the latest features and fixes!',
 	},
 	reload: {
 		id: 'app.update-popup.reload',
@@ -2021,7 +2199,15 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
 			>
 				<PlayIcon class="ml-0.5" />
 			</NavButton>
+				<NavButton
+					v-tooltip.right="formatMessage(messages.libraryLabel)"
+					to="/library"
+					:is-primary="() => route.path === '/library'"
+				>
+					<LibraryIcon />
+				</NavButton>
 			<NavButton
+				v-if="!isNavHidden('browse')"
 				v-tooltip.right="formatMessage(commonMessages.discoverContentLabel)"
 				to="/browse/modpack"
 				:is-primary="() => route.path.startsWith('/browse') && !route.query.i && !route.query.sid"
@@ -2031,21 +2217,50 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
 			>
 				<CompassIcon />
 			</NavButton>
+
+			<!-- 插件面板 -->
 			<NavButton
-				v-if="appSettings.showSkinSelectorInSidebar"
+				v-for="panel in pluginRegistry.navItems"
+				:key="panel.id"
+				v-tooltip.right="panel.title"
+				:to="`/ext/${panel.id}`"
+				:is-primary="() => route.path === `/ext/${panel.id}`"
+			>
+				<img
+					v-if="typeof panel.icon === 'string'"
+					:src="panel.icon"
+					alt=""
+					class="h-6 w-6 rounded"
+				/>
+				<component :is="panel.icon ?? ToggleRightIcon" v-else />
+			</NavButton>
+
+			<!-- 开发者模式下的组件画廊入口 -->
+			<NavButton
+				v-if="appSettings.devMode && !isNavHidden('gallery')"
+				v-tooltip.right="formatMessage(messages.pluginLogs)"
+				to="/gallery"
+			>
+				<ToggleRightIcon />
+			</NavButton>
+
+			<NavButton
+				v-if="appSettings.showSkinSelectorInSidebar && !isNavHidden('skins')"
 				v-tooltip.right="formatMessage(appMessages.skinSelectorLabel)"
 				to="/skins"
 			>
 				<ShirtIcon />
 			</NavButton>
 			<NavButton
-				v-if="globalSyncedOptionsQuery.data.value?.screenshots"
+				v-if="globalSyncedOptionsQuery.data.value?.screenshots && !isNavHidden('screenshots')"
 				v-tooltip.right="formatMessage(messages.screenshots)"
 				to="/screenshots"
 			>
 				<ImageIcon />
 			</NavButton>
+			<!-- 去商业化：AirCore Hosting 入口已移除 -->
 			<NavButton
+				v-if="false"
 				v-tooltip.right="formatMessage(messages.modrinthHosting)"
 				to="/hosting/manage"
 				:is-primary="(r) => r.path === '/hosting/manage' || r.path === '/hosting/manage/'"
@@ -2058,16 +2273,16 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
 				<ServerStackIcon />
 			</NavButton>
 			<suspense>
-				<QuickInstanceSwitcher>
-					<NavButton
-						v-tooltip.right="formatMessage(messages.createNewInstance)"
-						:to="() => installationModal?.show()"
-						:disabled="offline"
-					>
-						<PlusIcon />
-					</NavButton>
-				</QuickInstanceSwitcher>
+				<QuickInstanceSwitcher />
 			</suspense>
+			<!-- 新建实例：放在底部，紧贴设置图标上方 -->
+			<NavButton
+				v-tooltip.right="formatMessage(messages.createNewInstance)"
+				:to="() => installationModal?.show()"
+				:disabled="offline"
+			>
+				<PlusIcon />
+			</NavButton>
 			<NavButton
 				v-tooltip.right="formatMessage(commonMessages.settingsLabel)"
 				:to="settingsActions.openSettings"
@@ -2135,9 +2350,7 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
 					<UserRoleIcon :role="account.user.role" />
 				</template>
 			</TeleportOverflowMenu>
-			<NavButton v-else v-tooltip.right="profileButtonTooltip" :to="() => requestSignIn()">
-				<LogInIcon class="text-brand" />
-			</NavButton>
+			<!-- 去商业化：左下角的 Modrinth 账号登录按钮已移除 -->
 		</div>
 		<AppTitleBar
 			:can-navigate-back="canNavigateBack"
@@ -2150,23 +2363,30 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
 	<div
 		v-if="stateInitialized"
 		class="app-contents"
+		:style="{ '--right-bar-width': sidebarVisible ? '300px' : '0px' }"
 		:class="{
 			'sidebar-enabled': sidebarVisible,
 			'disable-advanced-rendering': !appTheme.advancedRendering,
 		}"
 	>
-		<div class="app-viewport flex-grow router-view">
+		<div
+			ref="viewportEl"
+			class="app-viewport flex-grow router-view"
+			:style="{ marginRight: sidebarVisible ? '300px' : '0px' }"
+		>
 			<SurveyPopup />
-			<div
-				class="loading-indicator-container h-8 fixed z-50 pointer-events-none"
-				:style="{
-					top: 'calc(var(--top-bar-height))',
-					left: 'calc(var(--left-bar-width))',
-					width: 'calc(100% - var(--left-bar-width) - var(--right-bar-width))',
-				}"
-			>
-				<LoadingBar position="absolute" />
-			</div>
+						<Teleport to="body">
+	<div
+					class="loading-indicator-container h-8 fixed z-50 pointer-events-none"
+					:style="{
+						top: '3rem',
+						left: '4rem',
+						right: sidebarVisible ? '300px' : '0px',
+					}"
+				>
+					<LoadingBar position="absolute" />
+				</div>
+			</Teleport>
 			<div
 				v-if="appSettings.featureFlags.page_path"
 				class="absolute bottom-0 left-0 m-2 bg-tooltip-bg text-tooltip-text font-semibold rounded-full px-2 py-1 text-xs z-50"
@@ -2177,7 +2397,7 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
 				id="background-teleport-target"
 				class="absolute h-full -z-10 rounded-tl-[--radius-xl] overflow-hidden"
 				:style="{
-					width: 'calc(100% - var(--right-bar-width))',
+					width: sidebarVisible ? 'calc(100% - 300px)' : '100%',
 				}"
 			></div>
 			<Admonition
@@ -2199,7 +2419,7 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
 			>
 				{{ formatMessage(messages.authUnreachableBody) }}
 			</Admonition>
-			<HostingUpdateRequired v-if="hostingUpdateRequired" />
+			<!-- hosting removed -->
 			<RouterView v-else v-slot="{ Component }">
 				<template v-if="Component">
 					<Suspense @pending="onSuspensePending" @resolve="onSuspenseResolve">
@@ -2219,9 +2439,21 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
 			@login-modrinth="signIn"
 		/>
 	</div>
+	<SandboxHost />
 	<I18nDebugPanel />
 	<NotificationPanel :has-sidebar="sidebarVisible" />
 	<PopupNotificationPanel :has-sidebar="sidebarVisible" />
+		<Teleport to="body">
+			<div class="pointer-events-none fixed bottom-6 right-6 z-[9999] flex flex-col gap-2">
+				<div
+					v-for="toast in pluginToasts"
+					:key="toast.id"
+					class="pointer-events-auto max-w-sm rounded-xl border border-solid border-surface-4 bg-surface-3 px-4 py-3 text-sm text-contrast shadow-lg"
+				>
+					{{ toast.message }}
+				</div>
+			</div>
+		</Teleport>
 	<ErrorModal ref="errorModal" />
 	<MinecraftAuthErrorModal ref="minecraftAuthErrorModal" />
 	<MinecraftRequiredModal ref="minecraftRequiredModal" />
@@ -2275,6 +2507,14 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
 	<UpdateToPlayModal ref="updateToPlayModal" :show-external-warnings="false" />
 </template>
 
+<style lang="scss">
+/* 侧栏切换的瞬间，禁用内容区所有 CSS 过渡，防止卡片被拉伸/缩放 */
+body.sidebar-resizing * {
+	transition-duration: 0s !important;
+	transition-delay: 0s !important;
+}
+</style>
+
 <style lang="scss" scoped>
 .app-grid-layout,
 .app-contents {
@@ -2322,10 +2562,36 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
 
 	display: grid;
 	grid-template-columns: 1fr 0px;
-	// transition: grid-template-columns 0.4s ease-in-out;
 
-	&.sidebar-enabled {
-		grid-template-columns: 1fr 300px;
+		&.sidebar-enabled {
+		grid-template-columns: 1fr 0px;
+	}
+
+	/* 侧栏：绝对定位；无论何时由类决定位置，不会与 JS 状态脱节 */
+	.app-sidebar {
+		position: absolute;
+		top: 0;
+		right: 0;
+		height: 100%;
+		width: 300px;
+		transform: translateX(0);
+	}
+
+	&:not(.sidebar-enabled) .app-sidebar {
+		transform: translateX(100%);
+	}
+
+	.app-viewport {
+		scrollbar-gutter: stable;
+		contain: paint;
+	}
+
+	&.sidebar-enabled .app-viewport {
+		margin-right: 300px;
+	}
+
+	&.sidebar-shifting .app-viewport {
+		pointer-events: none;
 	}
 }
 

@@ -1,19 +1,19 @@
 <script setup lang="ts">
 import { defineMessages, useScrollIndicator, useVIntl } from '@modrinth/ui'
+import PluginErrorBoundary from '@/components/ui/PluginErrorBoundary.vue'
+import { pluginRegistry } from '@/plugin-host'
+import { dispatchSandboxEvent, sandboxTrees } from '@/plugin-host'
+import { renderUiTree, type UiNode } from '@/plugins/ui-renderer'
 import { OverlayScrollbars } from 'overlayscrollbars'
-import { computed, onMounted, onScopeDispose, ref } from 'vue'
+import { computed, onMounted, onScopeDispose, ref, watch } from 'vue'
 
 import { useTheme } from '@/composables/use-theme'
-import PrideFundraiserBanner from '@/features/campaigns/pride-fundraiser-banner.vue'
-import FriendsList from '@/features/friends/friends-list/index.vue'
 import AccountsCard from '@/features/minecraft-accounts/accounts-card.vue'
 import type { MinecraftAccountsActions } from '@/features/minecraft-accounts/context'
-import NewsSidebar from '@/features/news/news-sidebar.vue'
 import OnboardingChecklist from '@/features/onboarding/checklist.vue'
 import type { ModrinthCredentials } from '@/helpers/mr_auth'
 import { injectOnboardingChecklist } from '@/providers/onboarding-checklist'
 
-import Promotion from './promotion.vue'
 
 const props = defineProps<{
 	credentials: ModrinthCredentials | null | undefined
@@ -31,9 +31,7 @@ const emit = defineEmits<{
 const { formatMessage } = useVIntl()
 const appTheme = useTheme()
 const { hasLoggedIntoMinecraft, hasLoggedIntoModrinth, showChecklist } = injectOnboardingChecklist()
-const showFriendsList = computed(() => !showChecklist.value || hasLoggedIntoModrinth.value)
 const accounts = ref<InstanceType<typeof AccountsCard> | null>(null)
-const friends = ref<InstanceType<typeof FriendsList> | null>(null)
 const scrollContainer = ref<HTMLElement | null>(null)
 const scrollViewport = ref<HTMLElement | null>(null)
 const upgradeHeight = ref(0)
@@ -67,7 +65,6 @@ const minecraftAccounts = computed<MinecraftAccountsActions | null>(() => {
 })
 
 function showAddFriendModal() {
-	friends.value?.showAddFriendModal()
 }
 
 defineExpose({ minecraftAccounts, showAddFriendModal })
@@ -78,6 +75,45 @@ const scrollbarOptions = Object.freeze({
 		y: 'scroll',
 	},
 })
+
+const contentVisible = ref(props.visible)
+let contentTimer: ReturnType<typeof setTimeout> | undefined
+watch(
+	() => props.visible,
+	(isVisible) => {
+		if (contentTimer) clearTimeout(contentTimer)
+		if (isVisible) {
+			contentVisible.value = true
+		} else {
+			contentTimer = setTimeout(() => {
+				contentVisible.value = false
+			}, 150)
+		}
+	},
+)
+
+const ENABLE_SANDBOX_SLOTS = true
+
+const sandboxSidebarSections = computed(() => {
+	if (!ENABLE_SANDBOX_SLOTS) return []
+	try {
+		return Array.from(sandboxTrees.entries())
+			.filter(([, trees]) => (trees.sidebar?.length ?? 0) > 0)
+			.map(([pluginId, trees]) => [pluginId, trees] as const)
+	} catch {
+		return []
+	}
+})
+
+function renderSandboxSidebar(pluginId: string, trees: { sidebar?: unknown[] }) {
+	try {
+		return renderUiTree((trees.sidebar ?? []) as UiNode[], (eventId, payload) =>
+			dispatchSandboxEvent(pluginId, eventId, payload),
+		)
+	} catch {
+		return []
+	}
+}
 
 const messages = defineMessages({
 	playingAs: {
@@ -109,9 +145,8 @@ const messages = defineMessages({
 				<div
 					id="sidebar-teleport-target"
 					class="sidebar-teleport-content empty:hidden"
-					:style="promotionPaddingStyle"
 				></div>
-				<div class="sidebar-default-content hidden" :class="{ 'sidebar-enabled': visible }">
+				<div class="sidebar-default-content hidden" :class="{ 'sidebar-enabled': contentVisible }">
 					<div
 						v-show="hasLoggedIntoMinecraft"
 						class="p-4 border-0 border-b-[1px] border-[--brand-gradient-border] border-solid"
@@ -124,21 +159,27 @@ const messages = defineMessages({
 						</Suspense>
 					</div>
 					<div
-						v-show="showFriendsList"
-						class="p-4 border-0 border-b-[1px] border-[--brand-gradient-border] border-solid"
+						v-for="[pluginId, trees] in sandboxSidebarSections"
+						:key="pluginId"
+						class="border-0 border-b-[1px] border-[--brand-gradient-border] border-solid"
 					>
-						<Suspense>
-							<FriendsList
-								ref="friends"
-								:credentials="credentials ?? null"
-								:sign-in="requestSignIn"
+						<div class="flex flex-col gap-2 p-4">
+							<component
+								:is="node"
+								v-for="(node, index) in renderSandboxSidebar(pluginId, trees)"
+								:key="index"
 							/>
-						</Suspense>
+						</div>
 					</div>
-					<PrideFundraiserBanner
-						class="p-4 border-0 border-b-[1px] border-[--brand-gradient-border] border-solid"
-					/>
-					<NewsSidebar :style="promotionPaddingStyle" />
+					<div
+						v-for="section in pluginRegistry.sidebarSections"
+						:key="section.id"
+						class="border-0 border-b-[1px] border-[--brand-gradient-border] border-solid"
+					>
+						<PluginErrorBoundary :plugin-id="section.pluginId">
+							<component :is="section.component" />
+						</PluginErrorBoundary>
+					</div>
 				</div>
 			</div>
 			<div
@@ -152,13 +193,12 @@ const messages = defineMessages({
 				aria-hidden="true"
 			/>
 		</div>
-		<Promotion v-if="showAd" @upgrade-height="upgradeHeight = $event" />
 	</div>
 </template>
 
 <style scoped>
 .app-sidebar {
-	background: var(--brand-gradient-bg);
+  background: color-mix(in srgb, var(--color-brand) 10%, var(--color-raised-bg));
 	--color-button-bg: var(--brand-gradient-button);
 	--surface-4: var(--brand-gradient-button);
 	--color-button-bg-hover: var(--brand-gradient-border);
@@ -172,6 +212,8 @@ const messages = defineMessages({
 }
 
 .sidebar-scroll-fade {
-	background: var(--brand-gradient-fade-out-color);
+  /* 如果背景色是深灰，直接给它改成透明或者深灰 */
+  background: transparent; /* 或者 background: var(--color-bg); */
+  display: none; /* 如果你根本不想要这个效果，直接隐藏最省事 */
 }
 </style>

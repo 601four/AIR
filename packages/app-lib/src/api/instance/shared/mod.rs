@@ -174,34 +174,9 @@ pub(crate) fn read_bounded_config_bundle_entry(
     Ok(bytes)
 }
 
-mod client;
-mod content;
-mod diff;
-mod install;
-mod invites;
-mod publish;
-mod report;
+
 mod types;
 
-pub(crate) use self::install::check_shared_instance_availability_before_launch;
-pub(crate) use self::publish::sync_shared_instance_icon;
-
-pub use self::install::{
-    accept_shared_instance_invite_for_install,
-    get_shared_instance_install_preview, get_shared_instance_update_preview,
-    install_shared_instance, update_shared_instance,
-};
-pub use self::invites::{
-    accept_pending_shared_instance_invite, create_shared_instance_invite_link,
-    decline_pending_shared_instance_invite, get_shared_instance_invites,
-    get_shared_instance_users, invite_shared_instance_users,
-    remove_shared_instance_users, revoke_shared_instance_invite,
-};
-pub use self::publish::{
-    get_shared_instance_publish_preview, publish_shared_instance,
-    unlink_shared_instance, unpublish_shared_instance,
-};
-pub use self::report::get_shared_instance_publish_support_details;
 pub use self::types::{
     SharedInstanceExternalFilePreview, SharedInstanceInstallPreview,
     SharedInstanceInvite, SharedInstanceInviteInstallPreview,
@@ -211,16 +186,147 @@ pub use self::types::{
     SharedInstanceUpdatePreview, SharedInstanceUser, SharedInstanceUsers,
 };
 
-pub async fn can_active_user_use_shared_instances() -> crate::Result<bool> {
-    let state = State::get().await?;
-    let Some(credentials) =
-        ModrinthCredentials::get_and_refresh(&state.pool, &state.api_semaphore)
-            .await?
-    else {
-        return Ok(true);
-    };
+// 共享实例功能已移除：下面这些函数保留签名，但一律"什么都不做"。
+// 上层调用不会报错，也不会再产生任何网络请求或数据库操作。
 
-    let status =
-        client::get_user_blacklist_status(&credentials.user_id, &state).await?;
-    Ok(!status.blacklisted)
+fn disabled() -> crate::Error {
+    crate::ErrorKind::InputError("共享实例功能已移除".to_string()).into()
+}
+
+pub async fn can_active_user_use_shared_instances() -> crate::Result<bool> {
+    Ok(false)
+}
+
+pub(crate) async fn check_shared_instance_availability_before_launch(
+    _instance_id: &str,
+    _state: &crate::State,
+) -> crate::Result<()> {
+    Ok(())
+}
+
+pub(crate) async fn sync_shared_instance_icon(
+    _instance_id: &str,
+    _icon_path: Option<&str>,
+    _state: &crate::State,
+) -> crate::Result<()> {
+    Ok(())
+}
+
+pub async fn get_shared_instance_users(
+    _instance_id: &str,
+) -> crate::Result<SharedInstanceUsers> {
+    Ok(SharedInstanceUsers::empty())
+}
+
+pub async fn invite_shared_instance_users(
+    _instance_id: &str,
+    _user_ids: Vec<String>,
+) -> crate::Result<SharedInstanceUsers> {
+    Err(disabled())
+}
+
+pub async fn create_shared_instance_invite_link(
+    _instance_id: &str,
+    _max_age_seconds: Option<i32>,
+    _max_uses: Option<i32>,
+    _replace_invite_id: Option<String>,
+) -> crate::Result<SharedInstanceInviteLink> {
+    Err(disabled())
+}
+
+pub async fn get_shared_instance_invites(
+    _instance_id: &str,
+) -> crate::Result<Vec<SharedInstanceInvite>> {
+    Ok(Vec::new())
+}
+
+pub async fn revoke_shared_instance_invite(
+    _instance_id: &str,
+    _invite_id: String,
+) -> crate::Result<()> {
+    Ok(())
+}
+
+pub async fn remove_shared_instance_users(
+    _instance_id: &str,
+    _user_ids: Vec<String>,
+    _has_pending_recipients: bool,
+) -> crate::Result<SharedInstanceUsers> {
+    Err(disabled())
+}
+
+pub async fn accept_pending_shared_instance_invite(
+    _shared_instance_id: &str,
+) -> crate::Result<()> {
+    Ok(())
+}
+
+pub async fn decline_pending_shared_instance_invite(
+    _shared_instance_id: &str,
+) -> crate::Result<()> {
+    Ok(())
+}
+
+pub async fn install_shared_instance(
+    _shared_instance_id: &str,
+    _name: String,
+    _manager_id: Option<String>,
+    _server_manager_name: Option<String>,
+    _server_manager_icon_url: Option<String>,
+    _instance_icon_url: Option<String>,
+) -> crate::Result<crate::install::InstallJobSnapshot> {
+    Err(disabled())
+}
+
+pub async fn get_shared_instance_install_preview(
+    _shared_instance_id: &str,
+    _name: String,
+) -> crate::Result<SharedInstanceInstallPreview> {
+    Err(disabled())
+}
+
+pub async fn accept_shared_instance_invite_for_install(
+    _invite_id: &str,
+) -> crate::Result<SharedInstanceInviteInstallPreview> {
+    Err(disabled())
+}
+
+pub async fn get_shared_instance_update_preview(
+    _instance_id: &str,
+) -> crate::Result<Option<SharedInstanceUpdatePreview>> {
+    Ok(None)
+}
+
+pub async fn update_shared_instance(
+    _instance_id: &str,
+) -> crate::Result<crate::install::InstallJobSnapshot> {
+    Err(disabled())
+}
+
+pub async fn unpublish_shared_instance(_instance_id: &str) -> crate::Result<()> {
+    Ok(())
+}
+
+pub async fn unlink_shared_instance(_instance_id: &str) -> crate::Result<()> {
+    Ok(())
+}
+
+pub async fn publish_shared_instance(
+    _instance_id: &str,
+    _file_paths: Vec<String>,
+    _on_progress: &(dyn Fn(u64, u64) + Send + Sync),
+) -> crate::Result<crate::state::instances::SharedInstanceAttachment> {
+    Err(disabled())
+}
+
+pub async fn get_shared_instance_publish_preview(
+    _instance_id: &str,
+) -> crate::Result<Option<SharedInstancePublishPreview>> {
+    Ok(None)
+}
+
+pub async fn get_shared_instance_publish_support_details(
+    _instance_id: &str,
+) -> crate::Result<Option<String>> {
+    Ok(None)
 }

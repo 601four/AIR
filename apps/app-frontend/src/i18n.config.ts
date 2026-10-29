@@ -4,10 +4,12 @@ import {
 	type CrowdinMessages,
 	LOCALES,
 } from '@modrinth/ui'
+import chineseUi from '@modrinth/ui/src/locales/zh-CN/index.json'
 import englishUi from '@modrinth/ui/src/locales/en-US/index.json'
 import { createI18n } from 'vue-i18n'
 
 import englishApp from './locales/en-US/index.json'
+import chineseApp from './locales/zh-CN/index.json'
 
 const localeUrls = import.meta.glob<string>('./locales/*/index.json', {
 	eager: true,
@@ -22,7 +24,8 @@ const uiLocaleUrls = import.meta.glob<string>('../../../packages/ui/src/locales/
 
 const i18n = createI18n({
 	legacy: false,
-	locale: 'en-US',
+	// 默认首选语言中文（用户切换后会被设置覆盖）
+	locale: 'zh-CN',
 	fallbackLocale: 'en-US',
 	messageCompiler: createMessageCompiler(),
 	missingWarn: false,
@@ -30,6 +33,8 @@ const i18n = createI18n({
 	messages: buildLocaleMessages({
 		'./app/en-US/index.json': { default: englishApp },
 		'./ui/en-US/index.json': { default: englishUi },
+		'./app/zh-CN/index.json': { default: chineseApp },
+		'./ui/zh-CN/index.json': { default: chineseUi },
 	}),
 })
 

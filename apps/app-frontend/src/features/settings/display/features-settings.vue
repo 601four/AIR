@@ -1,9 +1,14 @@
+<!--
+  这个文件是「设置 → 功能」页的界面。
+  模板里的 {{ formatMessage(messages.xxx) }} 是“文字查表”：
+    · messages.xxx 定义在同一文件下方的 defineMessages 里（带 id 和说明）
+    · 实际显示的中文在 locales/zh-CN/index.json 里，按 id 查找
+  为方便你阅读，每个占位符后面都添加了「显示：真实文字」的注释。
+-->
 <script setup lang="ts">
 import {
 	defineMessages,
-	injectAuth,
 	injectNotificationManager,
-	injectUserPreferences,
 	Slider,
 	Toggle,
 	useSavable,
@@ -31,27 +36,12 @@ import { screenshotKeys } from '@/pages/instance/query-options.ts'
 
 const appSettings = useAppSettings()
 const { formatMessage } = useVIntl()
-const auth = injectAuth()
 const { handleError } = injectNotificationManager()
-const { updatePreferences } = injectUserPreferences()
 const settingsModal = injectAppSettingsModal()
 const quickInstances = useQuickInstanceLimit()
 const queryClient = useQueryClient()
 
 const messages = defineMessages({
-	syncAcrossDevicesTitle: {
-		id: 'app.features-settings.sync-across-devices.title',
-		defaultMessage: 'Sync features across devices',
-	},
-	syncAcrossDevicesDescription: {
-		id: 'app.features-settings.sync-across-devices.description',
-		defaultMessage:
-			"Use these feature settings everywhere you're signed in. Turn this off to keep separate settings on this device.",
-	},
-	syncAcrossDevicesSignedOutTooltip: {
-		id: 'app.features-settings.sync-across-devices.signed-out-tooltip',
-		defaultMessage: 'Sign into a Modrinth account to sync settings.',
-	},
 	instancePagesTitle: {
 		id: 'app.features-settings.instance-pages.title',
 		defaultMessage: 'Instances',
@@ -113,7 +103,6 @@ const messages = defineMessages({
 })
 
 type FeaturesSettingsState = {
-	syncFeaturesAcrossDevices: boolean
 	showFilesTab: boolean
 	showWorldsTab: boolean
 	showScreenshotsTab: boolean
@@ -132,7 +121,6 @@ function getFeaturesSettingsState(
 	globalSyncedOptions: GlobalSyncedOptions,
 ): FeaturesSettingsState {
 	return {
-		syncFeaturesAcrossDevices: settings.sync_features_across_devices,
 		showFilesTab: settings.show_files_tab_in_instances,
 		showWorldsTab: settings.show_worlds_tab_in_instances,
 		showScreenshotsTab: settings.show_screenshots_tab_in_instances,
@@ -153,24 +141,10 @@ const settingsMutation = useMutation({
 		value: FeaturesSettingsState
 		updateQuickInstanceCount: boolean
 	}) => {
-		if (value.syncFeaturesAcrossDevices && auth.user.value) {
-			await updatePreferences({
-				behavior: {
-					show_jump_in: value.showJumpIn,
-					show_files_tab_in_instances: value.showFilesTab,
-					show_worlds_tab_in_instances: value.showWorldsTab,
-					show_screenshots_tab_in_instances: value.showScreenshotsTab,
-					show_all_screenshots: value.showAllScreenshots,
-					show_skin_selector_in_sidebar: value.showSkinSelector,
-					quick_instance_count: value.quickInstanceCount,
-				},
-			})
-		}
 
 		const latestSettings = await get()
 		const nextSettings: AppSettings = {
 			...latestSettings,
-			sync_features_across_devices: value.syncFeaturesAcrossDevices,
 			show_files_tab_in_instances: value.showFilesTab,
 			show_worlds_tab_in_instances: value.showWorldsTab,
 			show_screenshots_tab_in_instances: value.showScreenshotsTab,
@@ -191,7 +165,6 @@ const settingsMutation = useMutation({
 		if (screenshotsChanged) {
 			await queryClient.invalidateQueries({ queryKey: screenshotKeys.all })
 		}
-		appSettings.setFeaturesSyncAcrossDevices(value.syncFeaturesAcrossDevices)
 		appSettings.showFilesTabInInstances = value.showFilesTab
 		appSettings.showWorldsTabInInstances = value.showWorldsTab
 		appSettings.showScreenshotsTabInInstances = value.showScreenshotsTab
@@ -215,13 +188,17 @@ const settingsMutation = useMutation({
 		]),
 })
 
-const { saved, current, changes, saving, hasChanges, reset, save } = useSavable(
+const { saved, current, changes, saving, hasChanges, reset, save } = useSavable<FeaturesSettingsState>(
 	() => getFeaturesSettingsState(settingsQuery.data.value!, globalOptionsQuery.data.value!),
-	(changedValues) =>
-		settingsMutation.mutateAsync({
-			value: { ...current.value },
-			updateQuickInstanceCount: changedValues.quickInstanceCount !== undefined,
-		}),
+	(changedValues) => {
+		// 返回 void，避免类型层面的 Promise<unknown> 与 Promise<void> 冲突
+		settingsMutation
+			.mutateAsync({
+				value: { ...current.value },
+				updateQuickInstanceCount: changedValues.quickInstanceCount !== undefined,
+			})
+			.catch(() => {})
+	},
 )
 
 async function saveFeaturesSettings(): Promise<void> {
@@ -249,42 +226,15 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-	<section class="border-0 border-b border-solid border-surface-4 pb-6">
-		<div class="flex items-center justify-between gap-4">
-			<div>
-				<h2 id="sync-features-across-devices-label" class="m-0 text-lg font-semibold text-contrast">
-					{{ formatMessage(messages.syncAcrossDevicesTitle) }}
-				</h2>
-				<p class="m-0 mt-1 text-secondary">
-					{{ formatMessage(messages.syncAcrossDevicesDescription) }}
-				</p>
-			</div>
-			<span
-				v-tooltip="
-					!auth.user.value ? formatMessage(messages.syncAcrossDevicesSignedOutTooltip) : undefined
-				"
-				class="inline-flex shrink-0"
-			>
-				<Toggle
-					id="sync-features-across-devices"
-					:model-value="Boolean(auth.user.value) && current.syncFeaturesAcrossDevices"
-					:disabled="!auth.user.value"
-					aria-labelledby="sync-features-across-devices-label"
-					@update:model-value="current.syncFeaturesAcrossDevices = $event"
-				/>
-			</span>
-		</div>
-	</section>
-
-	<section class="mt-6">
+	<section class="mt-0">
 		<h2 class="m-0 text-xl font-semibold text-contrast">
-			{{ formatMessage(messages.instancePagesTitle) }}
+			{{ formatMessage(messages.instancePagesTitle) }} <!-- 显示：实例 -->
 		</h2>
 		<div class="mt-4 flex flex-col gap-6">
 			<div class="flex items-center justify-between gap-4">
 				<div>
 					<h3 class="m-0 text-lg font-semibold text-contrast">
-						{{ formatMessage(messages.showWorldsTabTitle) }}
+						{{ formatMessage(messages.showWorldsTabTitle) }} <!-- 显示：在实例中显示世界栏 -->
 					</h3>
 				</div>
 				<Toggle
@@ -297,7 +247,7 @@ onBeforeUnmount(() => {
 			<div class="flex items-center justify-between gap-4">
 				<div>
 					<h3 class="m-0 text-lg font-semibold text-contrast">
-						{{ formatMessage(messages.showFilesTabTitle) }}
+						{{ formatMessage(messages.showFilesTabTitle) }} <!-- 显示：在实例中显示文件栏 -->
 					</h3>
 				</div>
 				<Toggle
@@ -310,7 +260,7 @@ onBeforeUnmount(() => {
 			<div class="flex items-center justify-between gap-4">
 				<div>
 					<h3 class="m-0 text-lg font-semibold text-contrast">
-						{{ formatMessage(messages.showScreenshotsTabTitle) }}
+						{{ formatMessage(messages.showScreenshotsTabTitle) }} <!-- 显示：在实例中显示截图栏 -->
 					</h3>
 				</div>
 				<Toggle
@@ -324,16 +274,16 @@ onBeforeUnmount(() => {
 
 	<section class="mt-8 border-0 border-t border-solid border-surface-4 pt-6">
 		<h2 class="m-0 text-xl font-semibold text-contrast">
-			{{ formatMessage(messages.sidebarTitle) }}
+			{{ formatMessage(messages.sidebarTitle) }} <!-- 显示：侧边栏 -->
 		</h2>
 		<div class="mt-4 flex flex-col gap-6">
 			<div class="flex items-center justify-between gap-4">
 				<div>
 					<h3 class="m-0 text-lg font-semibold text-contrast">
-						{{ formatMessage(messages.showAllScreenshotsTitle) }}
+						{{ formatMessage(messages.showAllScreenshotsTitle) }} <!-- 显示：在侧边栏显示所有截图 -->
 					</h3>
 					<p class="m-0 mt-1">
-						{{ formatMessage(messages.showAllScreenshotsDescription) }}
+						{{ formatMessage(messages.showAllScreenshotsDescription) }} <!-- 显示：在左侧边栏显示一个按钮来查看所有实例的截图。 -->
 					</p>
 				</div>
 				<Toggle
@@ -346,9 +296,9 @@ onBeforeUnmount(() => {
 			<div class="flex items-center justify-between gap-4">
 				<div>
 					<h3 class="m-0 text-lg font-semibold text-contrast">
-						{{ formatMessage(messages.showSkinSelectorTitle) }}
+						{{ formatMessage(messages.showSkinSelectorTitle) }} <!-- 显示：在侧边栏显示皮肤选择器 -->
 					</h3>
-					<p class="m-0 mt-1">{{ formatMessage(messages.showSkinSelectorDescription) }}</p>
+					<p class="m-0 mt-1">{{ formatMessage(messages.showSkinSelectorDescription) }} <!-- 显示：在左侧边栏显示一个按钮以打开皮肤选择器。 --></p>
 				</div>
 				<Toggle
 					id="show-skin-selector-in-sidebar"
@@ -359,7 +309,7 @@ onBeforeUnmount(() => {
 
 			<div class="flex flex-col gap-2.5">
 				<h3 class="m-0 text-lg font-semibold text-contrast">
-					{{ formatMessage(messages.quickInstancesTitle) }}
+					{{ formatMessage(messages.quickInstancesTitle) }} <!-- 显示：侧边栏中的快速实例 -->
 				</h3>
 				<Slider
 					id="quick-instances-in-sidebar"
@@ -370,7 +320,7 @@ onBeforeUnmount(() => {
 					:step="1"
 				/>
 				<p class="m-0 leading-tight">
-					{{ formatMessage(messages.quickInstancesDescription) }}
+					{{ formatMessage(messages.quickInstancesDescription) }} <!-- 显示：选择左侧边栏显示的最近实例的最大数量。您也可以通过拖动分隔符来调整它。 -->
 				</p>
 			</div>
 		</div>
@@ -378,14 +328,14 @@ onBeforeUnmount(() => {
 
 	<section class="mt-8 border-0 border-t border-solid border-surface-4 pt-6">
 		<h2 class="m-0 text-xl font-semibold text-contrast">
-			{{ formatMessage(messages.playPageTitle) }}
+			{{ formatMessage(messages.playPageTitle) }} <!-- 显示：游玩界面 -->
 		</h2>
 		<div class="mt-4 flex items-center justify-between gap-4">
 			<div>
 				<h3 class="m-0 text-lg font-semibold text-contrast">
-					{{ formatMessage(messages.showJumpInTitle) }}
+					{{ formatMessage(messages.showJumpInTitle) }} <!-- 显示：在节中显示跳转 -->
 				</h3>
-				<p class="m-0 mt-1">{{ formatMessage(messages.showJumpInDescription) }}</p>
+				<p class="m-0 mt-1">{{ formatMessage(messages.showJumpInDescription) }} <!-- 显示：在游戏页面顶部显示最近播放的世界和实例。 --></p>
 			</div>
 			<Toggle
 				id="show-jump-in-section"

@@ -15,7 +15,7 @@ const { formatMessage } = useVIntl()
 const {
 	hasCreatedInstance,
 	hasLoggedIntoMinecraft,
-	hasLoggedIntoModrinth,
+	hasLoggedIntoAirCore,
 	isReady,
 	showChecklist,
 } = injectOnboardingChecklist()
@@ -35,9 +35,9 @@ const messages = defineMessages({
 		id: 'onboarding-checklist.login-minecraft',
 		defaultMessage: 'Sign in to Minecraft',
 	},
-	loginModrinth: {
+	loginAirCore: {
 		id: 'onboarding-checklist.login-modrinth',
-		defaultMessage: 'Sign in to Modrinth',
+		defaultMessage: 'Sign in to AirCore',
 	},
 })
 
@@ -54,12 +54,7 @@ const steps = computed(() => [
 		complete: hasLoggedIntoMinecraft.value,
 		action: () => emit('login-minecraft'),
 	},
-	{
-		id: 'login-modrinth',
-		label: formatMessage(messages.loginModrinth),
-		complete: hasLoggedIntoModrinth.value,
-		action: () => emit('login-modrinth'),
-	},
+	// 去商业化：移除「登录 AirCore 账号」这一步
 ])
 
 const accordionButtonClass = computed(

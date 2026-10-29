@@ -130,7 +130,8 @@ const tabs = computed<TabbedModalTab[]>(() => [
 		category: tabCategories.instance,
 		icon: UsersIcon,
 		content: SharingSettings,
-		shown: props.instance.shared_instance?.role === 'owner' && !props.instance.quarantined,
+		// 去商业化：共享实例功能已移除，这个标签页永不显示
+		shown: false,
 	},
 	{
 		name: defineMessage({

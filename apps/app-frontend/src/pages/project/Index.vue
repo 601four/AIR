@@ -963,14 +963,9 @@ const copyProjectLink = (project) => navigator.clipboard.writeText(getProjectLin
 	height: fit-content;
 	max-height: calc(100vh - 3.25rem);
 	padding: 1rem 0.5rem 1rem 1rem;
-	overflow-y: auto;
-	-ms-overflow-style: none;
-	scrollbar-width: none;
-
-	&::-webkit-scrollbar {
-		width: 0;
-		background: transparent;
-	}
+	/* 不要在这里再开一层滚动：右侧栏外层已经有滚动容器，
+	   嵌套滚动会导致两条滚动条重叠 */
+	overflow: visible;
 }
 
 .sidebar-card {

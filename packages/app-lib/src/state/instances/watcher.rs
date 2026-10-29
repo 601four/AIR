@@ -396,9 +396,16 @@ pub async fn init_watcher() -> crate::Result<FileWatcher> {
                                     )
                                     .await
                                 {
-                                    tracing::error!(
-                                        "Failed to reconcile {file_name} after filesystem change: {error}"
-                                    );
+                                    // 实例已被删除时会报 unknown instance，这是正常竞态，不需要 error 级别
+                                    if error.to_string().contains("unknown instance") {
+                                        tracing::debug!(
+                                            "Skipped stale synced option file {file_name}: {error}"
+                                        );
+                                    } else {
+                                        tracing::error!(
+                                            "Failed to reconcile {file_name} after filesystem change: {error}"
+                                        );
+                                    }
                                 }
                             }
                         });

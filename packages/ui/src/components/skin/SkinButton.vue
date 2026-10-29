@@ -191,9 +191,18 @@ watch(
 .skin-button.skin-button--selected:focus-within,
 .skin-button.skin-button--selected.skin-button--with-actions:hover,
 .skin-button.skin-button--selected.skin-button--with-actions:focus-within {
-	border-color: color-mix(in srgb, var(--color-text-primary) 40%, transparent);
-	background: var(--surface-3);
-	filter: brightness(1.1);
+  /* 边框用主题色 */
+  border-color: var(--color-brand);
+
+  /* 核心：从下往上的渐变 (0deg) */
+  background: linear-gradient(
+      0deg,
+      color-mix(in srgb, var(--color-brand) 20%, var(--surface-3)) 0%,
+      var(--surface-3) 100%
+  );
+
+  /* 建议把原来的亮度滤镜删掉，否则颜色会发灰发白 */
+  filter: none;
 }
 
 .skin-button--disabled {

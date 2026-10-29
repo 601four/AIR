@@ -119,7 +119,7 @@ import {
 	UploadIcon,
 } from '@modrinth/assets'
 import { commonMessages, defineMessages, useVIntl } from '@modrinth/ui'
-import { computed, defineAsyncComponent, h, onMounted, ref, watch } from 'vue'
+import { computed, defineAsyncComponent, h, markRaw, onMounted, ref, watch } from 'vue'
 
 import { useDebugLogger } from '#ui/composables/debug-logger'
 
@@ -288,15 +288,20 @@ async function search(query: string) {
 		ctx.projectSearchOptions.value = results.hits.map((hit) => ({
 			label: hit.title,
 			value: hit.project_id,
-			icon: defineAsyncComponent(() =>
-				Promise.resolve({
-					setup: () => () =>
-						h('img', {
-							src: hit.icon_url,
-							alt: hit.title,
-							class: 'h-5 w-5 rounded',
-						}),
-				}),
+			// markRaw：组件放进响应式数组会被 Vue 警告"组件被 reactive 化"，
+			// 开发模式下那条警告会把整棵组件树（含弹窗 stages 源码）序列化进日志，
+			// 单条十几 MB，输入搜索词就会把内存撑爆、界面卡死。
+			icon: markRaw(
+				defineAsyncComponent(() =>
+					Promise.resolve({
+						setup: () => () =>
+							h('img', {
+								src: hit.icon_url,
+								alt: hit.title,
+								class: 'h-5 w-5 rounded',
+							}),
+					}),
+				),
 			),
 		}))
 	} catch (error) {

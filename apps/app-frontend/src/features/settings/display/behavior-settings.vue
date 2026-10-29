@@ -1,9 +1,7 @@
 <script setup lang="ts">
 import {
 	defineMessages,
-	injectAuth,
 	injectNotificationManager,
-	injectUserPreferences,
 	Toggle,
 	useSavable,
 	useVIntl,
@@ -23,26 +21,11 @@ import {
 
 const appSettings = useAppSettings()
 const { formatMessage } = useVIntl()
-const auth = injectAuth()
 const { handleError } = injectNotificationManager()
-const { updatePreferences } = injectUserPreferences()
 const settingsModal = injectAppSettingsModal()
 const queryClient = useQueryClient()
 
 const messages = defineMessages({
-	syncAcrossDevicesTitle: {
-		id: 'app.behavior-settings.sync-across-devices.title',
-		defaultMessage: 'Sync behavior across devices',
-	},
-	syncAcrossDevicesDescription: {
-		id: 'app.behavior-settings.sync-across-devices.description',
-		defaultMessage:
-			"Use these behavior settings everywhere you're signed in. Turn this off to keep separate settings on this device.",
-	},
-	syncAcrossDevicesSignedOutTooltip: {
-		id: 'app.behavior-settings.sync-across-devices.signed-out-tooltip',
-		defaultMessage: 'Sign into a Modrinth account to sync settings.',
-	},
 	startupAndNavigationTitle: {
 		id: 'app.behavior-settings.startup-and-navigation.title',
 		defaultMessage: 'Startup and navigation',
@@ -61,7 +44,7 @@ const messages = defineMessages({
 	},
 	minimizeLauncherDescription: {
 		id: 'app.appearance-settings.minimize-launcher.description',
-		defaultMessage: 'Minimize Modrinth App when Minecraft starts.',
+		defaultMessage: 'Minimize AirCore when Minecraft starts.',
 	},
 	refocusOnGameCloseTitle: {
 		id: 'app.behavior-settings.refocus-on-game-close.title',
@@ -69,7 +52,7 @@ const messages = defineMessages({
 	},
 	refocusOnGameCloseDescription: {
 		id: 'app.behavior-settings.refocus-on-game-close.description',
-		defaultMessage: 'Bring Modrinth App to the foreground when Minecraft exits.',
+		defaultMessage: 'Bring AirCore to the foreground when Minecraft exits.',
 	},
 	defaultLandingPageHome: {
 		id: 'app.appearance-settings.default-landing-page.home',
@@ -118,7 +101,7 @@ const messages = defineMessages({
 	unknownPackWarningDescription: {
 		id: 'app.appearance-settings.unknown-pack-warning.description',
 		defaultMessage:
-			"Show a safety warning before installing a Modrinth Pack (.mrpack) that isn't hosted on Modrinth.",
+			"Show a safety warning before installing a AirCore Pack (.mrpack) that isn't hosted on Modrinth.",
 	},
 	skipNonEssentialWarningsTitle: {
 		id: 'app.appearance-settings.skip-non-essential-warnings.title',
@@ -132,7 +115,6 @@ const messages = defineMessages({
 })
 
 type BehaviorSettingsState = {
-	syncBehaviorAcrossDevices: boolean
 	minimizeApp: boolean
 	refocusOnGameClose: boolean
 	hideRightSidebar: boolean
@@ -148,7 +130,6 @@ await settingsQuery.suspense()
 
 function getBehaviorSettingsState(settings: AppSettings): BehaviorSettingsState {
 	return {
-		syncBehaviorAcrossDevices: settings.sync_behavior_across_devices,
 		minimizeApp: settings.hide_on_process_start,
 		refocusOnGameClose: settings.refocus_on_game_close,
 		compactInstanceCards: settings.compact_instance_cards,
@@ -164,25 +145,10 @@ const settingsMutation = useMutation({
 	mutationKey: appSettingsKeys.update,
 	scope: { id: 'app-settings' },
 	mutationFn: async (value: BehaviorSettingsState) => {
-		if (value.syncBehaviorAcrossDevices && auth.user.value) {
-			await updatePreferences({
-				behavior: {
-					minimize_app: value.minimizeApp,
-					refocus_on_game_close: value.refocusOnGameClose,
-					hide_right_sidebar: value.hideRightSidebar,
-					compact_instance_cards: value.compactInstanceCards,
-					show_play_time: value.showPlayTime,
-					hide_nametag: value.hideNametag,
-					warn_on_unknown_modpacks: value.warnOnUnknownModpacks,
-					skip_non_essential_warnings: value.skipNonEssentialWarnings,
-				},
-			})
-		}
 
 		const latestSettings = await get()
 		const nextSettings: AppSettings = {
 			...latestSettings,
-			sync_behavior_across_devices: value.syncBehaviorAcrossDevices,
 			hide_on_process_start: value.minimizeApp,
 			toggle_sidebar: value.hideRightSidebar,
 			hide_nametag_skins_page: value.hideNametag,
@@ -195,7 +161,6 @@ const settingsMutation = useMutation({
 
 		await set(nextSettings)
 		queryClient.setQueryData(appSettingsKeys.all, nextSettings)
-		appSettings.setBehaviorSyncAcrossDevices(value.syncBehaviorAcrossDevices)
 		appSettings.refocusOnGameClose = value.refocusOnGameClose
 		appSettings.compactInstanceCards = value.compactInstanceCards
 		appSettings.showPlayTime = value.showPlayTime
@@ -238,45 +203,18 @@ onBeforeUnmount(() => {
 })
 </script>
 <template>
-	<section class="border-0 border-b border-solid border-divider pb-6">
-		<div class="flex items-center justify-between gap-4">
-			<div>
-				<h2 id="sync-behavior-across-devices-label" class="m-0 text-lg font-semibold text-contrast">
-					{{ formatMessage(messages.syncAcrossDevicesTitle) }}
-				</h2>
-				<p class="m-0 mt-1 text-secondary">
-					{{ formatMessage(messages.syncAcrossDevicesDescription) }}
-				</p>
-			</div>
-			<span
-				v-tooltip="
-					!auth.user.value ? formatMessage(messages.syncAcrossDevicesSignedOutTooltip) : undefined
-				"
-				class="inline-flex shrink-0"
-			>
-				<Toggle
-					id="sync-behavior-across-devices"
-					:model-value="Boolean(auth.user.value) && current.syncBehaviorAcrossDevices"
-					:disabled="!auth.user.value"
-					aria-labelledby="sync-behavior-across-devices-label"
-					@update:model-value="current.syncBehaviorAcrossDevices = $event"
-				/>
-			</span>
-		</div>
-	</section>
-
-	<section class="mt-6">
+	<section class="mt-0">
 		<h2 class="m-0 text-xl font-semibold text-contrast">
-			{{ formatMessage(messages.startupAndNavigationTitle) }}
+			{{ formatMessage(messages.startupAndNavigationTitle) }} <!-- 显示：启动与导航 -->
 		</h2>
 		<div class="mt-4 flex flex-col gap-6">
 			<div class="flex items-center justify-between gap-4">
 				<div>
 					<h3 class="m-0 text-lg font-semibold text-contrast">
-						{{ formatMessage(messages.minimizeLauncherTitle) }}
+						{{ formatMessage(messages.minimizeLauncherTitle) }} <!-- 显示：最小化 App -->
 					</h3>
 					<p class="m-0 mt-1">
-						{{ formatMessage(messages.minimizeLauncherDescription) }}
+						{{ formatMessage(messages.minimizeLauncherDescription) }} <!-- 显示：当 Minecraft 进程启动时，将 AirCore 最小化。 -->
 					</p>
 				</div>
 				<Toggle id="minimize-launcher" v-model="current.minimizeApp" />
@@ -285,10 +223,10 @@ onBeforeUnmount(() => {
 			<div class="flex items-center justify-between gap-4">
 				<div>
 					<h3 id="refocus-on-game-close-label" class="m-0 text-lg font-semibold text-contrast">
-						{{ formatMessage(messages.refocusOnGameCloseTitle) }}
+						{{ formatMessage(messages.refocusOnGameCloseTitle) }} <!-- 显示：当《我的世界》关闭时，重新聚焦于AirCore -->
 					</h3>
 					<p id="refocus-on-game-close-description" class="m-0 mt-1">
-						{{ formatMessage(messages.refocusOnGameCloseDescription) }}
+						{{ formatMessage(messages.refocusOnGameCloseDescription) }} <!-- 显示：当 Minecraft 退出时，将AirCore调至前台。 -->
 					</p>
 				</div>
 				<Toggle
@@ -302,9 +240,9 @@ onBeforeUnmount(() => {
 			<div class="flex items-center justify-between gap-4">
 				<div>
 					<h3 class="m-0 text-lg font-semibold text-contrast">
-						{{ formatMessage(messages.toggleSidebarTitle) }}
+						{{ formatMessage(messages.toggleSidebarTitle) }} <!-- 显示：隐藏右侧边栏 -->
 					</h3>
-					<p class="m-0 mt-1">{{ formatMessage(messages.toggleSidebarDescription) }}</p>
+					<p class="m-0 mt-1">{{ formatMessage(messages.toggleSidebarDescription) }}</p>  <!-- 显示：默认隐藏右侧边栏，并添加一个按钮来显示或隐藏它。 -->
 				</div>
 				<Toggle id="toggle-sidebar" v-model="current.hideRightSidebar" />
 			</div>
@@ -313,15 +251,15 @@ onBeforeUnmount(() => {
 
 	<section class="mt-8 border-0 border-t border-solid border-divider pt-6">
 		<h2 class="m-0 text-xl font-semibold text-contrast">
-			{{ formatMessage(messages.contentTitle) }}
+			{{ formatMessage(messages.contentTitle) }} <!-- 显示：主页与内容 -->
 		</h2>
 		<div class="mt-4 flex flex-col gap-6">
 			<div class="flex items-center justify-between gap-4">
 				<div>
 					<h3 class="m-0 text-lg font-semibold text-contrast">
-						{{ formatMessage(messages.compactModeTitle) }}
+						{{ formatMessage(messages.compactModeTitle) }} <!-- 显示：紧凑模式 -->
 					</h3>
-					<p class="m-0 mt-1">{{ formatMessage(messages.compactModeDescription) }}</p>
+					<p class="m-0 mt-1">{{ formatMessage(messages.compactModeDescription) }}</p>  <!-- 显示：用紧凑行式布局显示库实例。 -->
 				</div>
 				<Toggle id="compact-mode" v-model="current.compactInstanceCards" />
 			</div>
@@ -329,9 +267,9 @@ onBeforeUnmount(() => {
 			<div class="flex items-center justify-between gap-4">
 				<div>
 					<h3 class="m-0 text-lg font-semibold text-contrast">
-						{{ formatMessage(messages.showPlayTimeTitle) }}
+						{{ formatMessage(messages.showPlayTimeTitle) }} <!-- 显示：显示游玩时间 -->
 					</h3>
-					<p class="m-0 mt-1">{{ formatMessage(messages.showPlayTimeDescription) }}</p>
+					<p class="m-0 mt-1">{{ formatMessage(messages.showPlayTimeDescription) }}</p>  <!-- 显示：显示您在每个实例中游玩的时间。 -->
 				</div>
 				<Toggle id="show-play-time" v-model="current.showPlayTime" />
 			</div>
@@ -339,9 +277,9 @@ onBeforeUnmount(() => {
 			<div class="flex items-center justify-between gap-4">
 				<div>
 					<h3 class="m-0 text-lg font-semibold text-contrast">
-						{{ formatMessage(messages.hideNametagTitle) }}
+						{{ formatMessage(messages.hideNametagTitle) }} <!-- 显示：隐藏名牌 -->
 					</h3>
-					<p class="m-0 mt-1">{{ formatMessage(messages.hideNametagDescription) }}</p>
+					<p class="m-0 mt-1">{{ formatMessage(messages.hideNametagDescription) }}</p>  <!-- 显示：在皮肤选择器页面的玩家预览上隐藏用户名。 -->
 				</div>
 				<Toggle id="hide-nametag-skins-page" v-model="current.hideNametag" />
 			</div>
@@ -350,31 +288,16 @@ onBeforeUnmount(() => {
 
 	<section class="mt-8 border-0 border-t border-solid border-divider pt-6">
 		<h2 class="m-0 text-xl font-semibold text-contrast">
-			{{ formatMessage(messages.confirmationsTitle) }}
+			{{ formatMessage(messages.confirmationsTitle) }} <!-- 显示：安全确认 -->
 		</h2>
 		<div class="mt-4 flex flex-col gap-6">
 			<div class="flex items-center justify-between gap-4">
 				<div>
 					<h3 class="m-0 text-lg font-semibold text-contrast">
-						{{ formatMessage(messages.unknownPackWarningTitle) }}
+						{{ formatMessage(messages.skipNonEssentialWarningsTitle) }} <!-- 显示：跳过非必要的警告 -->
 					</h3>
 					<p class="m-0 mt-1">
-						{{ formatMessage(messages.unknownPackWarningDescription) }}
-					</p>
-				</div>
-				<Toggle
-					id="warn-before-installing-unknown-modpacks"
-					v-model="current.warnOnUnknownModpacks"
-				/>
-			</div>
-
-			<div class="flex items-center justify-between gap-4">
-				<div>
-					<h3 class="m-0 text-lg font-semibold text-contrast">
-						{{ formatMessage(messages.skipNonEssentialWarningsTitle) }}
-					</h3>
-					<p class="m-0 mt-1">
-						{{ formatMessage(messages.skipNonEssentialWarningsDescription) }}
+						{{ formatMessage(messages.skipNonEssentialWarningsDescription) }} <!-- 显示：自动跳过低风险确认，包括重复安装整合包、常规内容删除、批量更新、解除整合包关联及修复提示。危险警告仍会显示。 -->
 					</p>
 				</div>
 				<Toggle id="skip-non-essential-warnings" v-model="current.skipNonEssentialWarnings" />

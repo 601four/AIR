@@ -167,15 +167,8 @@ export function createServerInstallContent(opts: {
 		worldId: effectiveServerWorldId,
 	})
 	const serverBackUrl = computed(() => {
-		const sid = serverIdQuery.value
-		if (!sid) return '/hosting/manage'
-		if (serverFlowFrom.value === 'onboarding') {
-			return `/hosting/manage/${sid}?resumeModal=setup-type`
-		}
-		if (serverFlowFrom.value === 'reset-server') {
-			return `/hosting/manage/${sid}?openSettings=installation`
-		}
-		return `/hosting/manage/${sid}/content`
+		// 去商业化：托管功能已移除，返回首页
+		return '/'
 	})
 	const serverBackLabel = computed(() => {
 		if (serverFlowFrom.value === 'onboarding') return 'Back to setup'

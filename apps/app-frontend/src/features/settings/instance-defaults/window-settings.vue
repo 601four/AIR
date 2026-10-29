@@ -63,10 +63,10 @@ const messages = defineMessages({
 			<div class="flex items-center justify-between gap-4">
 				<div class="flex flex-col gap-1">
 					<h2 class="m-0 text-lg font-semibold text-contrast">
-						{{ formatMessage(messages.fullscreenTitle) }}
+						{{ formatMessage(messages.fullscreenTitle) }} <!-- 显示：全屏 -->
 					</h2>
 					<p class="m-0 leading-tight">
-						{{ formatMessage(messages.fullscreenDescription) }}
+						{{ formatMessage(messages.fullscreenDescription) }} <!-- 显示：通过更新实例的options.txt文件以全屏方式启动实例。 -->
 					</p>
 				</div>
 				<Toggle
@@ -78,10 +78,10 @@ const messages = defineMessages({
 			<div class="flex items-center justify-between gap-4">
 				<div class="flex flex-col gap-1">
 					<h2 class="m-0 text-lg font-semibold text-contrast">
-						{{ formatMessage(messages.widthTitle) }}
+						{{ formatMessage(messages.widthTitle) }} <!-- 显示：宽度 -->
 					</h2>
 					<p class="m-0 leading-tight">
-						{{ formatMessage(messages.widthDescription) }}
+						{{ formatMessage(messages.widthDescription) }} <!-- 显示：游戏窗口启动时的宽度。 -->
 					</p>
 				</div>
 				<Input
@@ -97,10 +97,10 @@ const messages = defineMessages({
 			<div class="flex items-center justify-between gap-4">
 				<div class="flex flex-col gap-1">
 					<h2 class="m-0 text-lg font-semibold text-contrast">
-						{{ formatMessage(messages.heightTitle) }}
+						{{ formatMessage(messages.heightTitle) }} <!-- 显示：高度 -->
 					</h2>
 					<p class="m-0 leading-tight">
-						{{ formatMessage(messages.heightDescription) }}
+						{{ formatMessage(messages.heightDescription) }} <!-- 显示：游戏窗口启动时的高度。 -->
 					</p>
 				</div>
 				<Input

@@ -30,7 +30,13 @@ export function setupOnboardingChecklistProvider(
 		hasLoggedIntoMinecraft: computed(() => checklist.value?.has_logged_into_minecraft ?? false),
 		hasLoggedIntoModrinth: computed(() => checklist.value?.has_logged_into_modrinth ?? false),
 		isReady: computed(() => checklist.value !== undefined),
-		showChecklist: computed(() => checklist.value?.show_checklist ?? false),
+		showChecklist: computed(() => {
+			// 去商业化：Modrinth 账号登录已移除，新手引导只按"建过实例 + 登录微软账号"来判断，
+			// 否则这一步永远完不成，引导面板会一直挂在那里。
+			const c = checklist.value
+			if (!c) return false
+			return !(c.has_created_instance && c.has_logged_into_minecraft)
+		}),
 	}
 
 	provideOnboardingChecklist(context)

@@ -1,6 +1,7 @@
 <script setup lang="ts">
+import barrierIcon from '@/assets/brand/barrier.png'
 import { ChevronLeftIcon, ChevronRightIcon, RightArrowIcon } from '@modrinth/assets'
-import { defineMessages, IconButton, TextLogo, useVIntl } from '@modrinth/ui'
+import { defineMessages, IconButton, useVIntl } from '@modrinth/ui'
 import { useRouter } from 'vue-router'
 
 import AppActionBar from './action-bar.vue'
@@ -33,7 +34,11 @@ const messages = defineMessages({
 		class="app-title-bar relative z-[2] flex bg-bg-raised pl-1 [grid-area:status] [.mac-traffic-lights_&]:pl-20"
 	>
 		<div data-tauri-drag-region class="flex min-w-0 flex-1 items-center overflow-hidden p-2">
-			<TextLogo class="h-7 w-auto shrink-0 text-contrast pointer-events-none" />
+			<!-- 品牌：图标 + 文字 -->
+			<img :src="barrierIcon" alt="" class="mr-1.5 size-6 shrink-0 select-none" />
+			<span class="shrink-0 select-none text-[20px] font-extrabold tracking-tight text-contrast">
+				AirCore
+			</span>
 			<div data-tauri-drag-region class="ml-2 flex shrink-0 items-center gap-2">
 				<IconButton
 					type="outlined"

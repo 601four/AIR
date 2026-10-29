@@ -121,7 +121,7 @@ defineExpose({ show, hide })
 			</div>
 			<div v-else-if="error" class="flex flex-1 flex-col items-center justify-center gap-3">
 				<p role="alert" class="m-0 text-center text-primary">
-					{{ formatMessage(messages.loadError) }}
+					{{ formatMessage(messages.loadError) }} <!-- 显示：无法加载同步源。请稍后再试。 -->
 				</p>
 				<Button @click="emit('retry')">{{ formatMessage(messages.retry) }}</Button>
 			</div>
@@ -129,7 +129,7 @@ defineExpose({ show, hide })
 				v-else-if="filteredSources.length === 0"
 				class="flex flex-1 items-center justify-center text-secondary"
 			>
-				{{ formatMessage(messages.empty) }}
+				{{ formatMessage(messages.empty) }} <!-- 显示：没有找到实例 -->
 			</div>
 			<div v-else role="radiogroup" :aria-label="title" class="flex flex-col gap-1">
 				<div
@@ -171,7 +171,7 @@ defineExpose({ show, hide })
 					@click="canConfirm && emit('confirm')"
 				>
 					<RefreshCwIcon :class="{ 'animate-spin': pending }" aria-hidden="true" />
-					{{ formatMessage(messages.sync) }}
+					{{ formatMessage(messages.sync) }} <!-- 显示：同步 -->
 				</Button>
 			</div>
 		</template>

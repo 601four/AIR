@@ -1,8 +1,10 @@
 <script setup lang="ts">
 import {
+	BoxesIcon,
 	CheckIcon,
 	EditIcon,
 	EyeIcon,
+	GlobeIcon,
 	InfoIcon,
 	RotateCounterClockwiseIcon,
 	ShirtIcon,
@@ -17,6 +19,7 @@ import {
 	injectAuth,
 	injectModrinthClient,
 	injectNotificationManager,
+	NavTabs,
 	SkinPreviewRenderer,
 	Toggle,
 	useVIntl,
@@ -70,21 +73,23 @@ type VirtualSkinSectionListExpose = {
 }
 
 const PENDING_SKIN_REFRESH_DELAY_MS = 11_000
-const DEFAULT_SKIN_SECTION_SORT_ORDER = ['Default skins', 'Modrinth Pride']
+const DEFAULT_SKIN_SECTION_SORT_ORDER = ['Default skins', 'AirCore Pride']
 const EARS_NOTICE_PLACEHOLDER = '__EARS_MOD_NAME__'
 const messages = defineMessages({
+	tabSaved: { id: 'app.skins.tab.saved', defaultMessage: 'Your skins' },
+	tabOfficial: { id: 'app.skins.tab.official', defaultMessage: 'Official skins' },
 	modrinthPrideSection: {
 		id: 'app.skins.section.modrinth-pride',
-		defaultMessage: 'Modrinth Pride',
+		defaultMessage: 'AirCore Pride',
 	},
 	modrinthPrideTooltip: {
 		id: 'app.skins.section.modrinth-pride.tooltip',
 		defaultMessage:
-			'You received these skins for donating to a Modrinth Pride fundraiser during Pride Month.',
+			'You received these skins for donating to a AirCore Pride fundraiser during Pride Month.',
 	},
 	modrinthSection: {
 		id: 'app.skins.section.modrinth',
-		defaultMessage: 'Modrinth',
+		defaultMessage: 'AirCore',
 	},
 	defaultSkinsSection: {
 		id: 'app.skins.section.default-skins',
@@ -260,6 +265,13 @@ const earsFeatureNoticeParts = computed(() => {
 	}
 })
 
+const skinTab = ref<'saved' | 'official'>('saved')
+
+const skinTabLinks = computed(() => [
+	{ label: formatMessage(messages.tabSaved), href: 'saved', icon: ShirtIcon },
+	{ label: formatMessage(messages.tabOfficial), href: 'official', icon: GlobeIcon },
+])
+
 const savedSkins = computed(() => {
 	try {
 		return filterSavedSkins(skins.value)
@@ -289,7 +301,7 @@ const hasModrinthPrideCampaign = computed(
 )
 const defaultSkins = computed(() =>
 	filterDefaultSkins(skins.value).filter(
-		(skin) => skin.section !== 'Modrinth Pride' || hasModrinthPrideCampaign.value,
+		(skin) => skin.section !== 'AirCore Pride' || hasModrinthPrideCampaign.value,
 	),
 )
 const defaultSkinSections = computed(() => {
@@ -488,9 +500,9 @@ function isMinecraftSkinRateLimitError(error: unknown) {
 
 function getDefaultSkinSectionTitle(section?: string) {
 	switch (section) {
-		case 'Modrinth Pride':
+		case 'AirCore Pride':
 			return formatMessage(messages.modrinthPrideSection)
-		case 'Modrinth':
+		case 'AirCore':
 			return formatMessage(messages.modrinthSection)
 		case 'MINECON Earth 2017':
 			return formatMessage(messages.mineconEarth2017Section)
@@ -525,7 +537,7 @@ function getDefaultSkinSectionTitle(section?: string) {
 
 function getDefaultSkinSectionInfoTooltip(section: string) {
 	switch (section) {
-		case 'Modrinth Pride':
+		case 'AirCore Pride':
 			return formatMessage(messages.modrinthPrideTooltip)
 		default:
 			return undefined
@@ -1256,10 +1268,17 @@ await loadSkins()
 		</div>
 
 		<div class="pt-2">
+			<NavTabs
+				mode="local"
+				:links="skinTabLinks"
+				:active-index="skinTab === 'saved' ? 0 : 1"
+				class="mb-4"
+				@tab-click="(index: number) => (skinTab = index === 0 ? 'saved' : 'official')"
+			/>
 			<VirtualSkinSectionList
 				ref="skinSectionList"
-				:saved-skins="savedSkins"
-				:default-skin-sections="defaultSkinSections"
+				:saved-skins="skinTab === 'saved' ? savedSkins : []"
+				:default-skin-sections="skinTab === 'official' ? defaultSkinSections : []"
 				:capes="capes"
 				:is-skin-selected="isSkinSelected"
 				:is-skin-active="isSkinActive"

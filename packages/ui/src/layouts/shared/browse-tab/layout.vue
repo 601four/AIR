@@ -13,7 +13,7 @@ import Pagination from '#ui/components/base/Pagination.vue'
 import ProjectCard from '#ui/components/project/card/ProjectCard.vue'
 import ProjectCardList from '#ui/components/project/ProjectCardList.vue'
 import SearchFilterControl from '#ui/components/search/SearchFilterControl.vue'
-import { defineMessages, useVIntl } from '#ui/composables/i18n'
+import { defineMessage, defineMessages, useVIntl } from '#ui/composables/i18n'
 import { useStickyObserver } from '#ui/composables/sticky-observer'
 import { commonMessages, formatProjectTypeSentence } from '#ui/utils/common-messages'
 import type { SortType } from '#ui/utils/search'
@@ -32,10 +32,24 @@ const { isStuck: isInstallHeaderStuck } = useStickyObserver(
 	'BrowseInstallHeader',
 )
 
+// 排序名称走 i18n（不硬编码中文）
+const sortMessages = {
+	relevance: defineMessage({ id: 'browse.sort.relevance', defaultMessage: 'Relevance' }),
+	downloads: defineMessage({ id: 'browse.sort.downloads', defaultMessage: 'Downloads' }),
+	follows: defineMessage({ id: 'browse.sort.follows', defaultMessage: 'Followers' }),
+	newest: defineMessage({ id: 'browse.sort.newest', defaultMessage: 'Date published' }),
+	updated: defineMessage({ id: 'browse.sort.updated', defaultMessage: 'Date updated' }),
+} as Record<string, ReturnType<typeof defineMessage>>
+
+function sortLabel(sortType: SortType): string {
+	const message = sortMessages[sortType.name]
+	return message ? formatMessage(message) : sortType.display
+}
+
 const sortOptions = computed<ComboboxOption<SortType>[]>(() =>
 	ctx.effectiveSortTypes.value.map((st) => ({
 		value: st,
-		label: st.display,
+		label: sortLabel(st),
 	})),
 )
 

@@ -55,14 +55,14 @@
 			}
 		]
 	},
-	"productName": "Modrinth App",
+	"productName": "AirCore",
 	"version": "../app-frontend/package.json",
-	"mainBinaryName": "Modrinth App",
-	"identifier": "ModrinthApp",
+	"mainBinaryName": "AirCore",
+	"identifier": "com.aircore.launcher",
 	"plugins": {
 		"deep-link": {
 			"desktop": {
-				"schemes": ["modrinth"]
+				"schemes": ["aircore"]
 			},
 			"mobile": []
 		}
@@ -77,12 +77,12 @@
 				"fullscreen": false,
 				"height": 800,
 				"resizable": true,
-				"title": "Modrinth App",
+				"title": "AirCore",
 				"label": "main",
 				"width": 1280,
 				"minHeight": 700,
 				"minWidth": 1100,
-				"visible": false,
+				"visible": true,
 				"zoomHotkeysEnabled": false,
 				"decorations": false
 			}
@@ -99,14 +99,15 @@
 				],
 				"enable": true
 			},
-			"capabilities": ["ads", "core", "plugins"],
+			"capabilities": ["core", "plugins"],
+			"dangerousDisableAssetCspModification": true,
 			"csp": {
-				"default-src": "'self' customprotocol: asset:",
+				"default-src": "'self' customprotocol: asset: ext: http://ext.localhost",
 				"connect-src": "ipc: http://ipc.localhost https://modrinth.com https://*.modrinth.com https://*.nodes.modrinth.com https://*.sentry.io https://api.mclo.gs http://textures.minecraft.net https://textures.minecraft.net https://js.stripe.com https://*.stripe.com wss://*.stripe.com https://*.intercom.io wss://*.intercom.io https://*.intercomcdn.com https://www.intercom-reporting.com https://app.getsentry.com wss://*.nodes.modrinth.com https://*.taila228c5.ts.net https://*.taila228c5.ts.net wss://*.taila228c5.ts.net https://fill.papermc.io https://api.purpurmc.org 'self' data: blob:",
-				"font-src": ["https://cdn.modrinth.com/fonts/", "https://js.intercomcdn.com"],
-				"img-src": "https: 'unsafe-inline' 'self' asset: http://asset.localhost http://textures.minecraft.net blob: data:",
-				"style-src": "'unsafe-inline' 'self'",
-				"script-src": "https://js.stripe.com https://widget.intercom.io https://js.intercomcdn.com https://tally.so/widgets/embed.js 'self'",
+				"font-src": ["https://cdn.modrinth.com/fonts/", "https://js.intercomcdn.com", "ext:", "http://ext.localhost"],
+				"img-src": "https: 'unsafe-inline' 'self' asset: ext: http://ext.localhost http://asset.localhost http://textures.minecraft.net blob: data:",
+				"style-src": "'unsafe-inline' 'self' ext: http://ext.localhost",
+				"script-src": "ext: http://ext.localhost blob: 'wasm-unsafe-eval' 'unsafe-inline' https://js.stripe.com https://widget.intercom.io https://js.intercomcdn.com https://tally.so/widgets/embed.js 'self'",
 				"frame-src": "https://www.youtube.com https://www.youtube-nocookie.com https://discord.com https://tally.so/popup/ https://js.stripe.com https://hooks.stripe.com https://*.intercom.io https://intercom-sheets.com https://www.intercom-reporting.com https://app.intercom.com 'self'",
 				"media-src": "https://*.githubusercontent.com"
 			}

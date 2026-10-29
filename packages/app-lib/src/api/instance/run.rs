@@ -21,6 +21,19 @@ pub enum QuickPlayType {
     Server(ServerAddress),
 }
 
+/// 插件提供的启动覆盖（如离线登录）。不传时行为与原来完全一致。
+#[derive(serde::Deserialize, Debug, Clone, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct LaunchOverrides {
+	pub username: Option<String>,
+	pub uuid: Option<String>,
+	pub access_token: Option<String>,
+	#[serde(default)]
+	pub skip_session_join: bool,
+	#[serde(default)]
+	pub extra_jvm_args: Vec<String>,
+}
+
 #[tracing::instrument]
 pub async fn run(
     instance_id: &str,
@@ -60,11 +73,79 @@ pub async fn run(
     run_credentials(instance_id, &default_account, quick_play_type).await
 }
 
+/// 带覆盖的启动：允许插件提供离线身份。
+/// 传 None 时与 `run` 完全等价。
+pub async fn run_with_overrides(
+	instance_id: &str,
+	quick_play_type: QuickPlayType,
+	overrides: Option<LaunchOverrides>,
+) -> crate::Result<ProcessMetadata> {
+	let state = State::get().await?;
+	if crate::state::instances::adapters::sqlite::instance_rows::is_instance_quarantined(
+		instance_id,
+		&state.pool,
+	)
+	.await?
+	{
+		bail!(ErrorKind::InputError(
+			"this instance has been quarantined".to_string(),
+		));
+	}
+
+	let default_account = Credentials::get_default_credential(&state.pool).await?;
+
+	let mut credentials = match (default_account, overrides.as_ref()) {
+		(Some(account), _) => account,
+		(None, Some(o)) if o.username.is_some() && o.uuid.is_some() => {
+			// 没有微软账号时，为离线身份合成一份 Credentials
+			let uuid = uuid::Uuid::parse_str(o.uuid.as_deref().unwrap_or_default())
+				.unwrap_or_else(|_| uuid::Uuid::new_v4());
+			Credentials {
+				offline_profile: crate::state::MinecraftProfile {
+					id: uuid,
+					name: o.username.clone().unwrap_or_else(|| "Player".to_string()),
+					..Default::default()
+				},
+				access_token: o.access_token.clone().unwrap_or_else(|| "0".repeat(32)),
+				refresh_token: "0".repeat(32),
+				expires: chrono::Utc::now() + chrono::Duration::hours(12),
+				active: true,
+			}
+		}
+		_ => return Err(ErrorKind::NotLoggedIn.into()),
+	};
+
+	if let Some(o) = overrides.as_ref() {
+		if let Some(name) = o.username.as_ref() {
+			credentials.offline_profile.name = name.clone();
+		}
+		if let Some(id) = o.uuid.as_ref() {
+			if let Ok(uuid) = uuid::Uuid::parse_str(id) {
+				credentials.offline_profile.id = uuid;
+			}
+		}
+		if let Some(token) = o.access_token.as_ref() {
+			credentials.access_token = token.clone();
+		}
+	}
+
+	run_credentials_with(instance_id, &credentials, quick_play_type, overrides.as_ref()).await
+}
+
 #[tracing::instrument(skip(credentials))]
 async fn run_credentials(
-    instance_id: &str,
-    credentials: &Credentials,
-    quick_play_type: QuickPlayType,
+	instance_id: &str,
+	credentials: &Credentials,
+	quick_play_type: QuickPlayType,
+) -> crate::Result<ProcessMetadata> {
+	run_credentials_with(instance_id, credentials, quick_play_type, None).await
+}
+
+async fn run_credentials_with(
+	instance_id: &str,
+	credentials: &Credentials,
+	quick_play_type: QuickPlayType,
+	overrides: Option<&LaunchOverrides>,
 ) -> crate::Result<ProcessMetadata> {
     let state = State::get().await?;
     let settings = Settings::get(&state.pool).await?;
@@ -237,7 +318,8 @@ async fn run_credentials(
         mc_set_options.push(("fullscreen".to_string(), "true".to_string()));
     }
 
-    if let Some(project_id) = server_play_project_id(&context.link)
+    let skip_session = overrides.map(|o| o.skip_session_join).unwrap_or(false);
+    if !skip_session && let Some(project_id) = server_play_project_id(&context.link)
         && !project_id.trim().is_empty()
     {
         let server_id = uuid::Uuid::new_v4().to_string();
@@ -286,7 +368,14 @@ async fn run_credentials(
         }
     }
 
-    crate::minecraft_skins::flush_pending_skin_change().await?;
+    // 以插件身份启动时，不去碰正版账号的皮肤队列
+    if overrides.is_none() {
+        crate::minecraft_skins::flush_pending_skin_change().await?;
+    }
+    let mut java_args = java_args;
+    if let Some(o) = overrides {
+        java_args.extend(o.extra_jvm_args.iter().cloned());
+    }
     crate::launcher::launch_minecraft(
         &java_args,
         &launch_env_args,

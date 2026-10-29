@@ -59,7 +59,8 @@ pub use self::projects::{
     toggle_disable_project, update_managed_modrinth_version, update_project,
 };
 pub use self::run::{
-    QuickPlayType, kill, run, try_update_playtime_by_instance_id,
+    LaunchOverrides,
+    QuickPlayType, kill, run, run_with_overrides, try_update_playtime_by_instance_id,
 };
 pub use self::screenshot_groups::{
     ScreenshotGroup, ScreenshotGroupImport, ScreenshotGroupMembershipUpdate,

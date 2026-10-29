@@ -139,7 +139,8 @@ export function setupCreationModal(
 				}
 				const preview = await install_get_modpack_preview(location)
 
-				if (preview.unknownFile || preview.externalFilesInModpack.length > 0) {
+				if (false) {
+		// 去商业化：不再提示非托管整合包
 					const splitPath = config.modpackFilePath.value.split(/[\\/]/)
 					const fileName = splitPath
 						? splitPath[splitPath.length - 1]

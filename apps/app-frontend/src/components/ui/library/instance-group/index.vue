@@ -23,6 +23,7 @@ import {
 } from '@modrinth/ui'
 import { useElementSize, useWindowSize } from '@vueuse/core'
 import { computed, inject, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
+import { sidebarAnimating } from '@/helpers/ui-anim'
 
 import GroupActionButtons from '@/components/ui/library/instance-group/group-action-buttons.vue'
 import InstanceCard from '@/components/ui/library/instance-group/instance-card.vue'
@@ -90,6 +91,16 @@ const {
 	syncScrollState,
 } = useScrollViewport()
 const { width: gridWidth } = useElementSize(instanceGridContent)
+// 侧栏动画期间冻结宽度，避免每帧重算导致卡片抽搐
+const frozenWidth = ref<number | null>(null)
+watch(sidebarAnimating, (active) => {
+	if (active) {
+		frozenWidth.value = gridWidth.value
+	} else {
+		frozenWidth.value = null
+	}
+})
+const effectiveWidth = computed(() => frozenWidth.value ?? gridWidth.value)
 const { width: windowWidth } = useWindowSize()
 const focusedInstanceId = ref<string | null>(null)
 const enteringInstanceIds = ref(new Set<string>())
@@ -122,10 +133,10 @@ const remSize = ref(16)
 const gap = computed(() => remSize.value * 0.75)
 const columnCount = computed(() => {
 	const minWidth = remSize.value * (compactMode.value ? 15 : windowWidth.value < 1280 ? 8 : 10)
-	return Math.max(1, Math.floor((gridWidth.value + gap.value) / (minWidth + gap.value)))
+	return Math.max(1, Math.floor((effectiveWidth.value + gap.value) / (minWidth + gap.value)))
 })
 const cardWidth = computed(
-	() => (gridWidth.value - gap.value * (columnCount.value - 1)) / columnCount.value,
+	() => (effectiveWidth.value - gap.value * (columnCount.value - 1)) / columnCount.value,
 )
 const cardHeight = computed(() =>
 	compactMode.value

@@ -84,7 +84,7 @@ const messages = defineMessages({
 		<template v-if="settings">
 			<div class="flex flex-col gap-2.5">
 				<h2 class="m-0 text-lg font-semibold text-contrast">
-					{{ formatMessage(messages.preLaunchHookTitle) }}
+					{{ formatMessage(messages.preLaunchHookTitle) }} <!-- 显示：启动前执行命令 -->
 				</h2>
 				<Input
 					id="pre-launch"
@@ -96,12 +96,12 @@ const messages = defineMessages({
 					wrapper-class="w-full"
 				/>
 				<p class="m-0 leading-tight">
-					{{ formatMessage(messages.preLaunchHookDescription) }}
+					{{ formatMessage(messages.preLaunchHookDescription) }} <!-- 显示：在实例启动前运行。 -->
 				</p>
 			</div>
 			<div class="flex flex-col gap-2.5">
 				<h2 class="m-0 text-lg font-semibold text-contrast">
-					{{ formatMessage(messages.wrapperHookTitle) }}
+					{{ formatMessage(messages.wrapperHookTitle) }} <!-- 显示：包装器命令 -->
 				</h2>
 				<Input
 					id="wrapper"
@@ -113,12 +113,12 @@ const messages = defineMessages({
 					wrapper-class="w-full"
 				/>
 				<p class="m-0 leading-tight">
-					{{ formatMessage(messages.wrapperHookDescription) }}
+					{{ formatMessage(messages.wrapperHookDescription) }} <!-- 显示：用来包装 Minecraft 启动过程的命令。 -->
 				</p>
 			</div>
 			<div class="flex flex-col gap-2.5">
 				<h2 class="m-0 text-lg font-semibold text-contrast">
-					{{ formatMessage(messages.postExitHookTitle) }}
+					{{ formatMessage(messages.postExitHookTitle) }} <!-- 显示：退出后执行命令 -->
 				</h2>
 				<Input
 					id="post-exit"
@@ -130,11 +130,11 @@ const messages = defineMessages({
 					wrapper-class="w-full"
 				/>
 				<p class="m-0 leading-tight">
-					{{ formatMessage(messages.postExitHookDescription) }}
+					{{ formatMessage(messages.postExitHookDescription) }} <!-- 显示：在游戏关闭后运行。 -->
 				</p>
 			</div>
 			<div class="m-0 leading-tight">
-				{{ formatMessage(messages.hookVariablesDescription) }}
+				{{ formatMessage(messages.hookVariablesDescription) }} <!-- 显示：在此实例工作目录中的钩柄遵循以下这些变量： -->
 				<ul>
 					<li>{{ formatMessage(messages.instanceNameDescription) }}</li>
 					<li>{{ formatMessage(messages.instanceIdDescription) }}</li>

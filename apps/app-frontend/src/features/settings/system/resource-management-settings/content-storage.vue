@@ -267,7 +267,7 @@ function saveCacheLimit() {
 		<div class="flex flex-col gap-1">
 			<div class="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
 				<h2 id="content-storage-title" class="m-0 text-lg font-semibold text-contrast">
-					{{ formatMessage(messages.title) }}
+					{{ formatMessage(messages.title) }} <!-- 显示：内容存储 -->
 				</h2>
 				<span class="font-semibold tabular-nums text-contrast" aria-live="polite">
 					{{
@@ -396,7 +396,8 @@ function saveCacheLimit() {
 					<label for="store-cache-limit">{{ formatMessage(messages.limit) }}</label>
 				</h3>
 				<p id="store-cache-limit-description" class="m-0">
-					{{ formatMessage(messages.limitDescription) }}
+					{{ formatMessage(messages.limitDescription) }} <!-- 显示：保留这些未使用的内容以备未来安装。
+保留更多可以节省下载时间。 -->
 				</p>
 			</div>
 			<Input

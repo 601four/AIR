@@ -93,7 +93,7 @@ const messages = defineMessages({
 	customEmpty: {
 		id: 'app.settings.synced-options.game-settings.custom-empty',
 		defaultMessage:
-			'Settings added by mods will appear here after Modrinth finds them in one of your instances.',
+			'Settings added by mods will appear here after AirCore finds them in one of your instances.',
 	},
 	empty: {
 		id: 'app.settings.synced-options.game-settings.empty',
@@ -384,7 +384,7 @@ defineExpose({ show, hide })
 					class="mb-4 flex shrink-0 flex-wrap items-start justify-between gap-4 border-0 border-b border-solid border-surface-4 pb-4"
 				>
 					<p class="m-0 min-w-60 flex-1 text-primary">
-						{{ formatMessage(messages.syncedOptionsDescription) }}
+						{{ formatMessage(messages.syncedOptionsDescription) }} <!-- 显示：同步选项适用于每个实例，并覆盖包含整合包的值。 -->
 					</p>
 					<div class="ml-auto flex w-48 justify-end">
 						<Button
@@ -425,7 +425,7 @@ defineExpose({ show, hide })
 					<p class="m-0">{{ formatMessage(messages.loadFailed) }}</p>
 					<Button @click="load">
 						<RefreshCwIcon aria-hidden="true" />
-						{{ formatMessage(messages.retry) }}
+						{{ formatMessage(messages.retry) }} <!-- 显示：重新尝试 -->
 					</Button>
 				</div>
 				<div v-else class="min-h-0 flex-1">
@@ -460,7 +460,7 @@ defineExpose({ show, hide })
 		<template #floating-action-bar>
 			<FloatingActionBar v-if="isDirty" shown inline :aria-label="modalTitle">
 				<p class="m-0 text-sm font-semibold md:text-base">
-					{{ formatMessage(messages.unsavedChanges) }}
+					{{ formatMessage(messages.unsavedChanges) }} <!-- 显示：你有未保存的改动。 -->
 				</p>
 				<div class="ml-auto flex gap-2">
 					<Button type="outlined" @click="cancelChanges">
@@ -475,7 +475,7 @@ defineExpose({ show, hide })
 						@click="save"
 					>
 						<SaveIcon aria-hidden="true" />
-						{{ formatMessage(messages.saveSettings) }}
+						{{ formatMessage(messages.saveSettings) }} <!-- 显示：保存设置 -->
 					</Button>
 				</div>
 			</FloatingActionBar>

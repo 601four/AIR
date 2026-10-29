@@ -15,6 +15,7 @@ use rand::RngExt;
 use reqwest::Method;
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
+use std::sync::atomic::{AtomicU64, AtomicUsize, Ordering};
 use std::collections::{HashMap, VecDeque};
 use std::future::Future;
 use std::num::NonZeroU32;
@@ -335,6 +336,47 @@ fn reqwest_client_builder() -> reqwest::ClientBuilder {
         .user_agent(crate::launcher_user_agent())
 }
 
+
+/// 累计下载字节数（用于自适应并发）
+pub static DOWNLOADED_BYTES: AtomicU64 = AtomicU64::new(0);
+/// 当前允许的并发上限
+pub static DOWNLOAD_CONCURRENCY: AtomicUsize = AtomicUsize::new(32);
+
+/// 根据实测带宽自动调整下载并发数（5 秒一次）。
+/// 假设单连接能跑约 200KB/s：带宽越高开越多连接，带宽低就收回。
+pub fn spawn_adaptive_concurrency() {
+	tokio::spawn(async move {
+		let mut last = DOWNLOADED_BYTES.load(Ordering::Relaxed);
+		loop {
+			tokio::time::sleep(std::time::Duration::from_secs(5)).await;
+			let now = DOWNLOADED_BYTES.load(Ordering::Relaxed);
+			let delta = now.saturating_sub(last);
+			last = now;
+
+			let bps = delta as f64 / 5.0;
+			let target = ((bps / (200.0 * 1024.0)) as usize).clamp(8, 96);
+			let current = DOWNLOAD_CONCURRENCY.load(Ordering::Relaxed);
+
+			let Ok(state) = crate::State::get().await else {
+				continue;
+			};
+			let semaphore = &state.fetch_semaphore.0;
+
+			if target > current {
+				semaphore.add_permits(target - current);
+				DOWNLOAD_CONCURRENCY.store(target, Ordering::Relaxed);
+			} else if target < current {
+				let available = semaphore.available_permits();
+				let diff = current - target;
+				if available >= diff {
+					semaphore.forget_permits(diff);
+					DOWNLOAD_CONCURRENCY.store(target, Ordering::Relaxed);
+				}
+			}
+		}
+	});
+}
+
 pub static INSECURE_REQWEST_CLIENT: LazyLock<reqwest::Client> =
     LazyLock::new(|| {
         reqwest_client_builder_with_timeout()
@@ -426,7 +468,7 @@ impl DownloadedFile {
         })
     }
 
-    pub(crate) async fn store_file(
+pub(crate) async fn store_file(
         &self,
         content_store: &ContentStore,
     ) -> crate::Result<crate::state::content_store::StoredFileHandle> {
@@ -480,38 +522,268 @@ enum FetchBody {
 }
 
 /// Downloads and verifies a temporary file, which is removed when its last owner is dropped.
+
+/// 尝试分块（Range）下载大文件。
+/// 不支持 Range、文件过小、或任何一段失败时返回 None，由调用方回退到普通下载。
+async fn try_ranged_download(
+	url: &str,
+	sha1: Option<&str>,
+	staging: &Path,
+	mut progress: Option<&mut FetchProgressFn<'_>>,
+) -> Option<DownloadedFile> {
+	use futures::StreamExt;
+	use std::io::SeekFrom;
+	use tokio::io::{AsyncSeekExt, AsyncWriteExt};
+
+	const MIN_SIZE: u64 = 8 * 1024 * 1024;
+	const MAX_PARTS: u64 = 8;
+	const PART_ATTEMPTS: u32 = 3;
+
+	let head = REQWEST_CLIENT.head(url).send().await.ok()?;
+	if !head.status().is_success() {
+		return None;
+	}
+	let accept_ranges = head
+		.headers()
+		.get(reqwest::header::ACCEPT_RANGES)
+		.and_then(|v| v.to_str().ok())
+		.map(|v| v.eq_ignore_ascii_case("bytes"))
+		.unwrap_or(false);
+	let total = head.content_length()?;
+	if !accept_ranges || total < MIN_SIZE {
+		return None;
+	}
+
+	let parts = (total / (4 * 1024 * 1024)).clamp(2, MAX_PARTS);
+	let part_size = total.div_ceil(parts);
+
+	let (mut file, path) = temporary_file(Some(staging)).await.ok()?;
+	file.set_len(total).await.ok()?;
+
+	let downloaded = Arc::new(AtomicU64::new(0));
+	let mut tasks = tokio::task::JoinSet::new();
+
+	for index in 0..parts {
+		let start = index * part_size;
+		if start >= total {
+			break;
+		}
+		let end = ((start + part_size).min(total)) - 1;
+		let url = url.to_string();
+		let file = file.try_clone().await.ok()?;
+		let downloaded = Arc::clone(&downloaded);
+		tasks.spawn(async move {
+			// 每个分片独立重试：某一段失败不反应到整个文件
+			for attempt in 0..PART_ATTEMPTS {
+				if attempt > 0 {
+					tokio::time::sleep(std::time::Duration::from_millis(300 * attempt as u64))
+						.await;
+				}
+				let response = match REQWEST_CLIENT
+					.get(&url)
+					.header(reqwest::header::RANGE, format!("bytes={start}-{end}"))
+					.send()
+					.await
+				{
+					Ok(response) if response.status().is_success() => response,
+					_ => continue,
+				};
+
+				let mut stream = response.bytes_stream();
+				let mut file = match file.try_clone().await {
+					Ok(file) => file,
+					Err(_) => continue,
+				};
+				if file.seek(SeekFrom::Start(start)).await.is_err() {
+					continue;
+				}
+
+				let mut written = 0_u64;
+				let mut failed = false;
+				while let Some(chunk) = stream.next().await {
+					let chunk = match chunk {
+						Ok(chunk) => chunk,
+						Err(_) => {
+							failed = true;
+							break;
+						}
+					};
+					if file.write_all(&chunk).await.is_err() {
+						failed = true;
+						break;
+					}
+					written += chunk.len() as u64;
+					downloaded.fetch_add(chunk.len() as u64, Ordering::Relaxed);
+					DOWNLOADED_BYTES.fetch_add(chunk.len() as u64, Ordering::Relaxed);
+				}
+
+				let expected = end - start + 1;
+				if !failed && written == expected {
+					return true;
+				}
+				downloaded.fetch_sub(written.min(downloaded.load(Ordering::Relaxed)), Ordering::Relaxed);
+			}
+			false
+		});
+	}
+
+	// 进度：只增不减，避免多段并行时百分比来回跳
+	let mut reported = 0_u64;
+	let mut all_ok = true;
+	let mut ticker = tokio::time::interval(std::time::Duration::from_millis(150));
+	ticker.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
+
+	loop {
+		tokio::select! {
+			_ = ticker.tick() => {
+				let current = downloaded.load(Ordering::Relaxed).min(total);
+				if current > reported {
+					reported = current;
+					if let Some(callback) = progress.as_deref_mut() {
+						let _ = callback(current, total).await;
+					}
+				}
+			}
+			result = tasks.join_next() => {
+				match result {
+					None => break,
+					Some(Ok(true)) => {}
+					_ => all_ok = false,
+				}
+			}
+		}
+	}
+
+	if !all_ok {
+		return None;
+	}
+	file.flush().await.ok()?;
+	file.sync_all().await.ok()?;
+	drop(file);
+
+	let mut reader = tokio::fs::File::open(&path).await.ok()?;
+	let mut hasher = ContentHasher::default();
+	let mut sha1_hasher = sha1_smol::Sha1::new();
+	let mut size = 0_u64;
+	let mut buffer = vec![0_u8; 64 * 1024];
+	loop {
+		use tokio::io::AsyncReadExt;
+		let read = reader.read(&mut buffer).await.ok()?;
+		if read == 0 {
+			break;
+		}
+		hasher.update(&buffer[..read]);
+		sha1_hasher.update(&buffer[..read]);
+		size += read as u64;
+	}
+	let hashes = hasher.finish(size);
+
+	if let Some(expected) = sha1 {
+		let actual = crate::util::content_hash::encode_hex(&sha1_hasher.digest().bytes());
+		if !actual.eq_ignore_ascii_case(expected) {
+			return None;
+		}
+	}
+
+	if let Some(callback) = progress.as_deref_mut() {
+		let _ = callback(size, total).await;
+	}
+
+	Some(DownloadedFile {
+		path: DownloadedFilePath::Temporary(Arc::new(path)),
+		reused: false,
+		size,
+		sha512: hashes.sha512,
+	})
+}
+
 pub async fn fetch_file(
     url: &str,
     sha1: Option<&str>,
     download_meta: Option<&DownloadMeta>,
     uri_path: Option<&'static str>,
     semaphore: &FetchSemaphore,
-    exec: impl sqlx::Executor<'_, Database = sqlx::Sqlite>,
-    progress: Option<&mut FetchProgressFn<'_>>,
+    exec: impl sqlx::Executor<'_, Database = sqlx::Sqlite> + Copy,
+    mut progress: Option<&mut FetchProgressFn<'_>>,
     staging: &Path,
 ) -> crate::Result<DownloadedFile> {
-    let body = fetch_advanced_with_target(
-        Method::GET,
-        url,
-        sha1,
-        None,
-        None,
-        None,
-        download_meta,
-        None,
-        uri_path,
-        semaphore,
-        exec,
-        &INSECURE_REQWEST_CLIENT,
-        progress,
-        true,
-        Some(staging),
-    )
-    .await?;
-    match body {
-        FetchBody::File(file) => Ok(file),
-        FetchBody::Memory(_) => unreachable!("requested a file download"),
-    }
+	// 国内镜像优先；镜像 404/失败时回退到官方地址
+	let original_url = url.to_string();
+	// 同一类资源已判定镜像缺失时，直接走官方源，不再浪费一次 404
+	let category = crate::util::mirror::category(url);
+	let mirrored_url = if crate::util::mirror::current_source() == crate::util::mirror::DownloadSource::Bmclapi
+		&& !crate::util::mirror::is_broken(category)
+	{
+		crate::util::mirror::rewrite_url(url)
+	} else {
+		url.to_string()
+	};
+	let mut progress = progress;
+
+	for attempt in 0..2 {
+		let target: &str = if attempt == 0 {
+			mirrored_url.as_str()
+		} else {
+			original_url.as_str()
+		};
+
+		if sha1.is_some()
+			&& let Some(file) =
+				try_ranged_download(target, sha1, staging, progress.as_deref_mut()).await
+		{
+			return Ok(file);
+		}
+
+		let body = fetch_advanced_with_target(
+			Method::GET,
+			target,
+			sha1,
+			None,
+			None,
+			None,
+			download_meta,
+			None,
+			uri_path,
+			semaphore,
+			exec,
+			&INSECURE_REQWEST_CLIENT,
+			progress.as_deref_mut(),
+			true,
+			Some(staging),
+		)
+		.await;
+
+		match body {
+			Ok(FetchBody::File(file)) => return Ok(file),
+			Ok(FetchBody::Memory(_)) => unreachable!("requested a file download"),
+			Err(err) => {
+				if attempt == 0 && mirrored_url != original_url {
+					// 镜像缺文件，下一轮用官方地址，并提醒用户
+					// 只提示一次，避免数百个文件同时回退时刷屏
+					crate::util::mirror::record_failure(category);
+					let count = FALLBACK_COUNT.fetch_add(1, std::sync::atomic::Ordering::Relaxed) + 1;
+					// 镜像长期失败：自动切回官方源，避免每个文件都先撞一次 404
+					if count == 30 {
+						crate::util::mirror::set_source(crate::util::mirror::DownloadSource::Official);
+						tracing::warn!("镜像连续失败 30 次，本次运行已自动切回官方源");
+					}
+					if !FALLBACK_WARNED.swap(true, std::sync::atomic::Ordering::Relaxed) {
+						let message = "国内镜像缺少部分文件，已自动回退到官方源下载（后续同类不再提示）".to_string();
+						if let Ok(handle) = tokio::runtime::Handle::try_current() {
+							handle.spawn(async move {
+								let _ = crate::emit_warning(&message).await;
+							});
+						}
+					}
+					tracing::debug!("镜像回退官方源: {original_url}");
+					continue;
+				}
+				return Err(err);
+			}
+		}
+	}
+
+	unreachable!("download loop must return or error")
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -574,6 +846,7 @@ async fn read_file_response(
         crate::install::control::download_step(stream.next()).await?
     {
         let chunk = chunk?;
+        DOWNLOADED_BYTES.fetch_add(chunk.len() as u64, Ordering::Relaxed);
         file.write_all(&chunk).await?;
         hasher.update(&chunk);
         size += chunk.len() as u64;
@@ -669,6 +942,7 @@ pub async fn fetch(
     semaphore: &FetchSemaphore,
     exec: impl sqlx::Executor<'_, Database = sqlx::Sqlite>,
 ) -> crate::Result<Bytes> {
+	let url = &crate::util::mirror::rewrite_url(url);
     fetch_advanced(
         Method::GET,
         url,
@@ -723,6 +997,7 @@ pub async fn fetch_json<T>(
 where
     T: DeserializeOwned,
 {
+	let url = &crate::util::mirror::rewrite_url(url);
     let result = fetch_advanced(
         method, url, sha1, json_body, None, None, None, uri_path, semaphore,
         exec,
@@ -748,6 +1023,7 @@ pub async fn fetch_advanced(
     semaphore: &FetchSemaphore,
     exec: impl sqlx::Executor<'_, Database = sqlx::Sqlite>,
 ) -> crate::Result<Bytes> {
+	let url = &crate::util::mirror::rewrite_url(url);
     fetch_advanced_with_client(
         method,
         url,
@@ -775,6 +1051,7 @@ pub async fn fetch_advanced_bytes(
     semaphore: &FetchSemaphore,
     exec: impl sqlx::Executor<'_, Database = sqlx::Sqlite>,
 ) -> crate::Result<Bytes> {
+	let url = &crate::util::mirror::rewrite_url(url);
     fetch_advanced_with_client_and_progress(
         method,
         url,
@@ -808,6 +1085,7 @@ pub async fn fetch_advanced_with_progress(
     exec: impl sqlx::Executor<'_, Database = sqlx::Sqlite>,
     progress: Option<&mut FetchProgressFn<'_>>,
 ) -> crate::Result<Bytes> {
+	let url = &crate::util::mirror::rewrite_url(url);
     fetch_advanced_with_client_and_progress(
         method,
         url,
@@ -842,6 +1120,7 @@ pub async fn fetch_advanced_with_client(
     exec: impl sqlx::Executor<'_, Database = sqlx::Sqlite>,
     client: &reqwest::Client,
 ) -> crate::Result<Bytes> {
+	let url = &crate::util::mirror::rewrite_url(url);
     fetch_advanced_with_client_and_progress(
         method,
         url,
@@ -1395,3 +1674,6 @@ mod tests {
         }
     }
 }
+
+static FALLBACK_COUNT: std::sync::atomic::AtomicU32 = std::sync::atomic::AtomicU32::new(0);
+static FALLBACK_WARNED: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);

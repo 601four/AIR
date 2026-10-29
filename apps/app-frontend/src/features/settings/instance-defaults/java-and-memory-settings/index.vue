@@ -1,7 +1,10 @@
 <script setup lang="ts">
 import { SpinnerIcon } from '@modrinth/assets'
-import { Button, commonMessages, defineMessages, Input, Slider, useVIntl } from '@modrinth/ui'
+import { Button, commonMessages, defineMessages, Input, Slider, Toggle, useVIntl } from '@modrinth/ui'
 
+import { computed, ref, watch } from 'vue'
+
+import { recommendMemoryMb, useMemorySettings } from '@/composables/use-memory-settings.ts'
 import useMemorySlider from '@/composables/useMemorySlider'
 import { parseEnvVars, serializeEnvVars } from '@/helpers/settings'
 
@@ -23,7 +26,54 @@ const { settings, settingsQuery } = useDefaultInstanceSettings(
 )
 const { maxMemory, snapPoints, memoryQuery } = useMemorySlider()
 
+// 自动内存分配
+const { autoMemory, setAutoMemory, prelaunchOptimize, setPrelaunchOptimize } = useMemorySettings()
+
+const optimizeResult = ref(null)
+async function optimizeNow() {
+	const { runMemoryOptimize } = await import('@/composables/use-memory-settings')
+	optimizeResult.value = await runMemoryOptimize()
+}
+const autoMemoryEnabled = computed(() => autoMemory.value)
+const recommendedMemory = computed(() => recommendMemoryMb(maxMemory.value))
+watch(
+	[recommendedMemory, autoMemoryEnabled],
+	([recommended, enabled]) => {
+		if (enabled && settings.value) {
+			settings.value.memory.maximum = recommended
+		}
+	},
+	{ immediate: true },
+)
+function onAutoMemoryToggle(value: boolean) {
+	setAutoMemory(value)
+}
+
+function onPrelaunchToggle(value: boolean) {
+	setPrelaunchOptimize(value)
+}
+
 const messages = defineMessages({
+	autoMemoryLabel: { id: 'app.memory.auto', defaultMessage: 'Automatic memory allocation' },
+	autoMemoryHint: {
+		id: 'app.memory.autoHint',
+		defaultMessage: '(Recommended from physical memory, currently {mb} MB)',
+	},
+	optimizeNow: { id: 'app.memory.optimizeNow', defaultMessage: 'Optimize now' },
+	optimizeResult: {
+		id: 'app.memory.optimizeResult',
+		defaultMessage:
+			'Released {freed} MB · available {available} MB · trimmed {processes} processes',
+	},
+	prelaunchLabel: {
+		id: 'app.memory.prelaunch',
+		defaultMessage: 'Optimize memory before launch',
+	},
+	prelaunchHint: {
+		id: 'app.memory.prelaunchHint',
+		defaultMessage:
+			'(Asks the system to reclaim the launcher cold pages before launching; other programs are not touched)',
+	},
 	javaInstallationsTitle: {
 		id: 'app.settings.tabs.java-installations',
 		defaultMessage: 'Java installations',
@@ -67,7 +117,7 @@ const messages = defineMessages({
 	<div class="flex flex-col gap-6">
 		<section class="flex flex-col gap-4">
 			<h2 class="m-0 text-xl font-semibold text-contrast">
-				{{ formatMessage(messages.javaInstallationsTitle) }}
+				{{ formatMessage(messages.javaInstallationsTitle) }} <!-- 显示：Java 管理 -->
 			</h2>
 			<JavaInstallations />
 		</section>
@@ -75,10 +125,18 @@ const messages = defineMessages({
 			<template v-if="settings">
 				<div class="flex flex-col gap-2.5">
 					<h2 class="m-0 text-lg font-semibold text-contrast">
-						{{ formatMessage(messages.memoryAllocationTitle) }}
+						{{ formatMessage(messages.memoryAllocationTitle) }} <!-- 显示：内存分配 -->
 					</h2>
+					<label class="flex items-center gap-3">
+						<Toggle :model-value="autoMemoryEnabled" @update:model-value="onAutoMemoryToggle" />
+						<span class="text-contrast">{{ formatMessage(messages.autoMemoryLabel) }}</span>
+						<span class="text-sm text-secondary">
+							{{ formatMessage(messages.autoMemoryHint, { mb: recommendedMemory }) }}
+						</span>
+					</label>
 					<Slider
 						v-if="maxMemory"
+						:disabled="autoMemoryEnabled"
 						id="max-memory"
 						v-model="settings.memory.maximum"
 						:aria-label="formatMessage(messages.memoryAllocationTitle)"
@@ -101,12 +159,34 @@ const messages = defineMessages({
 						class="h-10 animate-pulse rounded-lg bg-surface-3"
 					/>
 					<p class="m-0 mt-1 leading-tight">
-						{{ formatMessage(messages.memoryAllocationDescription) }}
+						{{ formatMessage(messages.memoryAllocationDescription) }} <!-- 显示：每个实例的最大可用内存。 -->
 					</p>
+
+					<label class="mt-1 flex items-center gap-3">
+						<Toggle :model-value="prelaunchOptimize" @update:model-value="onPrelaunchToggle" />
+						<span class="text-contrast">{{ formatMessage(messages.prelaunchLabel) }}</span>
+						<span class="text-sm text-secondary">
+							{{ formatMessage(messages.prelaunchHint) }}
+						</span>
+					</label>
+					<div class="mt-1 flex items-center gap-3">
+						<Button type="outlined" size="sm" @click="optimizeNow">
+							{{ formatMessage(messages.optimizeNow) }}
+						</Button>
+						<span v-if="optimizeResult" class="text-sm text-secondary">
+							{{
+								formatMessage(messages.optimizeResult, {
+									freed: optimizeResult.freed_mb,
+									available: optimizeResult.available_after_mb,
+									processes: optimizeResult.trimmed_processes,
+								})
+							}}
+						</span>
+					</div>
 				</div>
 				<div class="flex flex-col gap-2.5">
 					<h2 class="m-0 text-lg font-semibold text-contrast">
-						{{ formatMessage(messages.javaArgumentsTitle) }}
+						{{ formatMessage(messages.javaArgumentsTitle) }} <!-- 显示：Java 参数 -->
 					</h2>
 					<Input
 						id="java-args"
@@ -118,12 +198,12 @@ const messages = defineMessages({
 						wrapper-class="w-full"
 					/>
 					<p class="m-0 leading-tight">
-						{{ formatMessage(messages.javaArgumentsDescription) }}
+						{{ formatMessage(messages.javaArgumentsDescription) }} <!-- 显示：启动实例时传递给 Java 的参数。 -->
 					</p>
 				</div>
 				<div class="flex flex-col gap-2.5">
 					<h2 class="m-0 text-lg font-semibold text-contrast">
-						{{ formatMessage(messages.environmentVariablesTitle) }}
+						{{ formatMessage(messages.environmentVariablesTitle) }} <!-- 显示：环境变量 -->
 					</h2>
 					<Input
 						id="env-vars"
@@ -135,7 +215,7 @@ const messages = defineMessages({
 						wrapper-class="w-full"
 					/>
 					<p class="m-0 leading-tight">
-						{{ formatMessage(messages.environmentVariablesDescription) }}
+						{{ formatMessage(messages.environmentVariablesDescription) }} <!-- 显示：启动实例时设置的环境变量。 -->
 					</p>
 				</div>
 			</template>

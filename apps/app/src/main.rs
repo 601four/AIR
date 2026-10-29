@@ -114,7 +114,27 @@ async fn set_restart_after_pending_update(
 
 // if Tauri app is called with arguments, then those arguments will be treated as commands
 // ie: deep links or filepaths for .mrpacks
+/// 启动时写一行日志，用来确认日志目录与写权限正常
+fn aircore_boot_log() {
+    use std::io::Write;
+    let base = std::env::var("APPDATA")
+        .map(std::path::PathBuf::from)
+        .unwrap_or_else(|_| std::path::PathBuf::from("."));
+    let dir = base.join("com.aircore.launcher").join("logs");
+    let _ = std::fs::create_dir_all(&dir);
+    let path = dir.join("webview.log");
+    if let Ok(mut file) = std::fs::OpenOptions::new().create(true).append(true).open(&path) {
+        let _ = writeln!(
+            file,
+            "{} [boot] launcher started, log file = {}",
+            chrono::Local::now().format("%Y-%m-%dT%H:%M:%S%.3f"),
+            path.display()
+        );
+    }
+}
+
 fn main() {
+    aircore_boot_log();
     let runtime = tokio::runtime::Builder::new_multi_thread()
         .enable_all()
         .build()
@@ -150,6 +170,45 @@ fn main() {
     tracing::info!("Initialized tracing subscriber. Loading Modrinth App!");
 
     let mut builder = tauri::Builder::default();
+
+	// ext://<extension-id>/<file> —— 为插件页面提供静态文件
+	builder = builder.register_asynchronous_uri_scheme_protocol("ext", |ctx, request, responder| {
+		let app = ctx.app_handle().clone();
+		let uri = request.uri().to_string();
+		std::thread::spawn(move || {
+			// Windows / Android 上自定义协议被映射为 http://ext.localhost/<id>/<file>
+			// macOS / Linux 上为 ext://<id>/<file>
+			let without_scheme = uri
+				.splitn(2, "://")
+				.nth(1)
+				.unwrap_or("")
+				.trim_start_matches('/')
+				.to_string();
+			let without_host = without_scheme
+				.strip_prefix("ext.localhost/")
+				.or_else(|| without_scheme.strip_prefix("localhost/"))
+				.unwrap_or(without_scheme.as_str())
+				.to_string();
+			let (host, path) = without_host
+				.split_once('/')
+				.unwrap_or((without_host.as_str(), ""));
+			let result = api::extensions::serve_extension(&app, host, path);
+			let response = match result {
+				Some((bytes, mime)) => tauri::http::Response::builder()
+					.status(200)
+					.header("Content-Type", mime)
+					.header("Access-Control-Allow-Origin", "*")
+					.body(bytes)
+					.unwrap(),
+				None => tauri::http::Response::builder()
+					.status(404)
+					.header("Access-Control-Allow-Origin", "*")
+					.body(Vec::new())
+					.unwrap(),
+			};
+			responder.respond(response);
+		});
+	});
 
     #[cfg(target_os = "macos")]
     {
@@ -323,8 +382,8 @@ fn main() {
         .plugin(api::users::init())
         .plugin(api::utils::init())
         .plugin(api::cache::init())
+        .plugin(api::extensions::init())
         .plugin(api::files::init())
-        .plugin(api::ads::init())
         .plugin(api::friends::init())
         .plugin(api::worlds::init())
         .manage(PendingUpdateData::default())

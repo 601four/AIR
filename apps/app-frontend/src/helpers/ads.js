@@ -1,59 +1,27 @@
-import { invoke } from '@tauri-apps/api/core'
+// 去商业化：广告相关逻辑已全部移除。
+// 这里只保留空的函数名，避免其它文件 import 报错。
+// 原来的实现是调用 Tauri 的 plugin:ads 命令。
 
-export async function init_ads_window(overrideShown = false) {
-	return await invoke('plugin:ads|init_ads_window', {
-		overrideShown,
-		dpr: window.devicePixelRatio,
-	})
-}
+export async function init_ads_window(_overrideShown = false) {}
 
-let adsWindowHoldUpdate = Promise.resolve()
+export async function take_ads_window_hold() {}
 
-async function update_ads_window_hold(acquire) {
-	adsWindowHoldUpdate = adsWindowHoldUpdate
-		.catch(() => {})
-		.then(() =>
-			invoke('plugin:ads|update_ads_window_hold', {
-				acquire,
-				dpr: window.devicePixelRatio,
-			}),
-		)
+export async function release_ads_window_hold() {}
 
-	return await adsWindowHoldUpdate
-}
-
-export async function take_ads_window_hold() {
-	return await update_ads_window_hold(true)
-}
-
-export async function release_ads_window_hold() {
-	return await update_ads_window_hold(false)
-}
-
-export async function hide_ads_window(reset) {
-	return await invoke('plugin:ads|hide_ads_window', { reset })
-}
+export async function hide_ads_window(_reset) {}
 
 export async function should_show_ads_consent_popup() {
-	return await invoke('plugin:ads|should_show_ads_consent_popup')
+	return false
 }
 
-export async function perform_ads_consent_action(action) {
-	return await invoke('plugin:ads|perform_ads_consent_action', { action })
-}
+export async function perform_ads_consent_action(_action) {}
 
-export async function open_ads_consent_preferences() {
-	return await invoke('plugin:ads|open_ads_consent_preferences')
-}
+export async function open_ads_consent_preferences() {}
 
-export async function record_ads_click() {
-	return await invoke('plugin:ads|record_ads_click')
-}
+export async function record_ads_click() {}
 
-export async function open_ads_link(path, origin) {
-	return await invoke('plugin:ads|open_link', { path, origin })
-}
+export async function open_ads_link(_path, _origin) {}
 
 export async function get_ads_debug_state() {
-	return await invoke('plugin:ads|get_ads_debug_state')
+	return null
 }

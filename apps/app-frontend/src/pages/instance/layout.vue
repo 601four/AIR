@@ -549,14 +549,6 @@ const tabs = computed(() => {
 		icon: TerminalSquareIcon,
 	})
 
-	if (showShareTab.value) {
-		instanceTabs.push({
-			label: formatMessage(messages.shareTab),
-			href: `${basePath.value}/share`,
-			icon: UserPlusIcon,
-		})
-	}
-
 	return instanceTabs
 })
 
@@ -566,6 +558,7 @@ watch(
 		routeName: router.currentRoute.value.name,
 	}),
 	({ quarantined, routeName }) => {
+		// 去商业化：共享实例分享页已移除，这里只保留隔离实例的兜底跳转
 		if (quarantined && routeName === 'InstanceShare') {
 			void router.replace(basePath.value)
 		}

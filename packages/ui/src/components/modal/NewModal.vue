@@ -761,7 +761,12 @@ defineOptions({
 
 	// Fade variants
 	&.standard {
-		background: linear-gradient(to bottom, rgba(29, 48, 43, 0.52) 0%, rgba(14, 21, 26, 0.95) 100%);
+		// 用强调色混合，规避原本写死的绿色蒙层
+		background: linear-gradient(
+			to bottom,
+			color-mix(in srgb, var(--color-brand) 5%, rgba(20, 22, 26, 0.52)) 0%,
+			color-mix(in srgb, var(--color-brand) 1.5%, rgba(14, 21, 26, 0.95)) 100%
+		);
 	}
 
 	&.warning {

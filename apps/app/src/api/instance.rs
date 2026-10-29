@@ -1315,12 +1315,13 @@ pub async fn instance_get_pack_export_candidates(
 pub async fn instance_run(
     instance_id: &str,
     server_address: Option<String>,
+    overrides: Option<theseus::instance::LaunchOverrides>,
 ) -> Result<ProcessMetadata> {
     let quick_play = match server_address {
         Some(addr) => QuickPlayType::Server(ServerAddress::Unresolved(addr)),
         None => QuickPlayType::None,
     };
-    Ok(theseus::instance::run(instance_id, quick_play).await?)
+    Ok(theseus::instance::run_with_overrides(instance_id, quick_play, overrides).await?)
 }
 
 #[tauri::command]

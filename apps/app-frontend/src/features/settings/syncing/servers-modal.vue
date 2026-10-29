@@ -349,13 +349,13 @@ defineExpose({ show })
 					v-if="syncedServers.length === 0"
 					class="flex flex-1 items-center justify-center p-8 text-center text-secondary"
 				>
-					{{ formatMessage(messages.noSyncedServers) }}
+					{{ formatMessage(messages.noSyncedServers) }} <!-- 显示：当前未同步任何用户添加的服务器。 -->
 				</div>
 				<div
 					v-else-if="filteredSyncedServerRows.length === 0"
 					class="flex flex-1 items-center justify-center p-8 text-center text-secondary"
 				>
-					{{ formatMessage(messages.noMatchingServers) }}
+					{{ formatMessage(messages.noMatchingServers) }} <!-- 显示：没有符合搜索或筛选条件的服务器。 -->
 				</div>
 				<div v-else class="min-h-0 flex-1 overflow-y-auto">
 					<Table
@@ -446,11 +446,11 @@ defineExpose({ show })
 	>
 		<div v-if="editedServer" class="flex flex-col gap-4">
 			<label class="flex flex-col gap-2 font-semibold text-contrast">
-				{{ formatMessage(messages.serverName) }}
+				{{ formatMessage(messages.serverName) }} <!-- 显示：服务器名称 -->
 				<Input v-model="editedServer.name" autocomplete="off" wrapper-class="w-full" />
 			</label>
 			<label class="flex flex-col gap-2 font-semibold text-contrast">
-				{{ formatMessage(messages.serverAddress) }}
+				{{ formatMessage(messages.serverAddress) }} <!-- 显示：服务器地址 -->
 				<Input v-model="editedServer.address" autocomplete="off" wrapper-class="w-full" />
 			</label>
 		</div>

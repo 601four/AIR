@@ -52,7 +52,13 @@ pub fn init<R: Runtime>() -> tauri::plugin::TauriPlugin<R> {
             progress_bars_list,
             get_opening_command,
             super::thumbnails::get_image_thumbnail,
-        ])
+            optimize_launcher_memory,
+            set_download_source,
+            prefs_get_all,
+            debug_log_append,
+            prefs_set,
+            translate_text,
+])
         .build()
 }
 
@@ -286,4 +292,228 @@ pub(crate) fn tauri_convert_file_src(path: &Path) -> Result<Url> {
     let encoded = urlencoding::encode(&path);
 
     Ok(Url::parse(&format!("{BASE}{encoded}"))?)
+}
+
+/// 尝试释放启动器自身占用的工作集（Windows 上调用 SetProcessWorkingSetSize）。
+/// 这不会动其他进程，只让系统回收启动器的冷页，为游戏让出内存。
+#[tauri::command]
+pub fn optimize_launcher_memory() -> serde_json::Value {
+    let result = crate::api::memory_optimize::optimize_system_memory();
+    serde_json::to_value(result).unwrap_or_else(|_| serde_json::json!({}))
+}
+/// 读取 AirCore 自定义偏好（强调色 / 内存开关 / 下载源）
+#[tauri::command]
+pub async fn prefs_get_all() -> std::result::Result<std::collections::HashMap<String, String>, String> {
+    theseus::prefs::prefs_get_all()
+        .await
+        .map_err(|e| e.to_string())
+}
+
+/// 写入一个 AirCore 偏好
+#[tauri::command]
+pub async fn prefs_set(key: String, value: String) -> std::result::Result<(), String> {
+    theseus::prefs::prefs_set(key, value)
+        .await
+        .map_err(|e| e.to_string())
+}
+
+/// 把前端控制台信息追加到文件，便于排查白屏 / 报错
+#[tauri::command]
+pub fn debug_log_append<R: tauri::Runtime>(app: tauri::AppHandle<R>, lines: String) -> bool {
+    use std::io::Write;
+    use tauri::Manager;
+    let Ok(dir) = app.path().app_data_dir() else {
+        return false;
+    };
+    let log_dir = dir.join("logs");
+    if std::fs::create_dir_all(&log_dir).is_err() {
+        return false;
+    }
+    let path = log_dir.join("webview.log");
+    match std::fs::OpenOptions::new().create(true).append(true).open(path) {
+        Ok(mut file) => file.write_all(lines.as_bytes()).is_ok(),
+        Err(_) => false,
+    }
+}
+
+/// 切换 Minecraft 下载源："official" | "bmclapi"
+#[tauri::command]
+pub fn set_download_source(source: String) -> bool {
+	use theseus::util::mirror::{set_source, DownloadSource};
+	let parsed = match source.as_str() {
+		"bmclapi" => DownloadSource::Bmclapi,
+		_ => DownloadSource::Official,
+	};
+	set_source(parsed);
+	true
+}
+
+
+/// 从字符串中取出 marker 之后、下一个引号之前的内容
+fn extract_between(haystack: &str, marker: &str) -> Option<String> {
+    let start = haystack.find(marker)? + marker.len();
+    let rest = &haystack[start..];
+    let end = rest.find('"')?;
+    Some(rest[..end].to_string())
+}
+
+/// 使用必应（国际版翻译器的免费页面接口）翻译
+async fn try_bing(client: &reqwest::Client, text: &str) -> Option<String> {
+    let page = client
+        .get("https://cn.bing.com/translator")
+        .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64)")
+        .send()
+        .await
+        .ok()?
+        .text()
+        .await
+        .ok()?;
+
+    let ig = extract_between(&page, "IG:\"")?;
+    let iid = extract_between(&page, "data-iid=\"translator.")?;
+    let token = extract_between(&page, "params_AbusePreventionHelper = [")?;
+    // 上面拿到的是时间戳，再取紧随的 token 字符串
+    let after_ts = page.find("params_AbusePreventionHelper = [")?;
+    let slice = &page[after_ts..];
+    let comma = slice.find(",\"")? + 2;
+    let token_rest = &slice[comma..];
+    let token_end = token_rest.find('"')?;
+    let abuse_token = &token_rest[..token_end];
+    let timestamp = token.trim_end_matches(',').trim_matches('"').to_string();
+
+    let url = format!(
+        "https://cn.bing.com/ttranslatev3?isVertical=1&&IG={ig}&IID=translator.{iid}.1"
+    );
+
+    let params = [
+        ("fromLang", "auto-detect".to_string()),
+        ("text", text.to_string()),
+        ("to", "zh-Hans".to_string()),
+        ("token", abuse_token.to_string()),
+        ("key", timestamp),
+    ];
+
+    let response = client.post(&url).form(&params).send().await.ok()?;
+    let value: serde_json::Value = response.json().await.ok()?;
+    let translated = value
+        .get(0)?
+        .get("translations")?
+        .get(0)?
+        .get("text")?
+        .as_str()?
+        .to_string();
+    if translated.trim().is_empty() {
+        None
+    } else {
+        Some(translated)
+    }
+}
+
+
+/// Lingva（开源 Google 代理，国内可访问）
+async fn try_lingva(client: &reqwest::Client, text: &str) -> Option<String> {
+    let encoded: String = urlencoding_encode(text);
+    for host in ["https://lingva.ml", "https://lingva.garudalinux.org"] {
+        let url = format!("{host}/api/v1/auto/zh/{encoded}");
+        if let Ok(response) = client.get(&url).send().await {
+            if response.status().is_success() {
+                if let Ok(value) = response.json::<serde_json::Value>().await {
+                    if let Some(translation) = value.get("translation").and_then(|v| v.as_str()) {
+                        if !translation.trim().is_empty() {
+                            return Some(translation.to_string());
+                        }
+                    }
+                }
+            }
+        }
+    }
+    None
+}
+
+/// 简易 URL 编码（避免引入额外依赖）
+fn urlencoding_encode(input: &str) -> String {
+    let mut out = String::new();
+    for byte in input.as_bytes() {
+        match byte {
+            b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9' | b'-' | b'_' | b'.' | b'~' => {
+                out.push(*byte as char)
+            }
+            _ => out.push_str(&format!("%{byte:02X}")),
+        }
+    }
+    out
+}
+
+/// 翻译文本：必应 → Lingva → Google → MyMemory → 失败。
+#[tauri::command]
+pub async fn translate_text(
+	text: String,
+	target: Option<String>,
+) -> std::result::Result<String, String> {
+	translate_text_inner(text, target)
+		.await
+		.map_err(|e| e.to_string())
+}
+
+async fn translate_text_inner(text: String, target: Option<String>) -> anyhow::Result<String> {
+    let target = target.unwrap_or_else(|| "zh-CN".to_string());
+    let client = reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(20))
+        .build()
+        .map_err(|e| anyhow::anyhow!(e))?;
+
+    // 0) 必应免费页面接口
+    if let Some(translated) = try_bing(&client, &text).await {
+        return Ok(translated);
+    }
+
+    // 1) Lingva（开源代理，多个镜像）
+    if let Some(translated) = try_lingva(&client, &text).await {
+        return Ok(translated);
+    }
+
+    // 2) Google 非官方 gtx 接口
+    if let Ok(response) = client
+        .get("https://translate.googleapis.com/translate_a/single")
+        .query(&[
+            ("client", "gtx"),
+            ("sl", "auto"),
+            ("tl", target.as_str()),
+            ("dt", "t"),
+            ("q", text.as_str()),
+        ])
+        .send()
+        .await
+    {
+        if response.status().is_success() {
+            if let Ok(value) = response.json::<serde_json::Value>().await {
+                if let Some(chunks) = value.get(0).and_then(|v| v.as_array()) {
+                    let mut translated = String::new();
+                    for chunk in chunks {
+                        if let Some(part) = chunk.get(0).and_then(|v| v.as_str()) {
+                            translated.push_str(part);
+                        }
+                    }
+                    if !translated.trim().is_empty() {
+                        return Ok(translated);
+                    }
+                }
+            }
+        }
+    }
+
+    // 3) MyMemory 备选
+    let response = client
+        .get("https://api.mymemory.translated.net/get")
+        .query(&[("q", text.as_str()), ("langpair", "en|zh-CN")])
+        .send()
+        .await
+        .map_err(|e| anyhow::anyhow!(e))?;
+    let value: serde_json::Value = response.json().await.map_err(|e| anyhow::anyhow!(e))?;
+    value
+        .get("responseData")
+        .and_then(|v| v.get("translatedText"))
+        .and_then(|v| v.as_str())
+        .map(|s| s.to_string())
+        .ok_or_else(|| anyhow::anyhow!("翻译失败"))
 }

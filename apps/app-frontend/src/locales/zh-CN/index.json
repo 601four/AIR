@@ -78,7 +78,7 @@
     "message": "Minecraft 配置失败"
   },
   "app.action-bar.install.summary.modrinth-unreachable": {
-    "message": "无法连接 Modrinth"
+    "message": "无法连接 AirCore"
   },
   "app.action-bar.install.summary.no-write-permission": {
     "message": "没有写入权限"
@@ -135,7 +135,7 @@
     "message": "全部接受"
   },
   "app.ads-consent.body": {
-    "message": "​广告维持着 Modrinth 的持续运营，并为创作者收益提供资金支持。我们的合作伙伴可能会在应用中存储或读取 Cookie，以提供个性化广告并评估广告效果。"
+    "message": "​广告维持着 AirCore 的持续运营，并为创作者收益提供资金支持。我们的合作伙伴可能会在应用中存储或读取 Cookie，以提供个性化广告并评估广告效果。"
   },
   "app.ads-consent.manage": {
     "message": "管理偏好设置"
@@ -144,7 +144,7 @@
     "message": "全部拒绝"
   },
   "app.ads-consent.title": {
-    "message": "您的隐私以及广告如何支持 Modrinth"
+    "message": "您的隐私以及广告如何支持 AirCore"
   },
   "app.appearance-settings.compact-mode.description": {
     "message": "用紧凑行式布局显示库实例。"
@@ -165,7 +165,7 @@
     "message": "隐藏名牌"
   },
   "app.appearance-settings.minimize-launcher.description": {
-    "message": "当 Minecraft 进程启动时，将 Modrinth App 最小化。"
+    "message": "当 Minecraft 进程启动时，将 AirCore 最小化。"
   },
   "app.appearance-settings.minimize-launcher.title": {
     "message": "最小化 App"
@@ -189,7 +189,7 @@
     "message": "隐藏右侧边栏"
   },
   "app.appearance-settings.unknown-pack-warning.description": {
-    "message": "在安装非 Modrinth 托管的 Modrinth 整合包文件（.mrpack）前显示安全警告。"
+    "message": "在安装非 AirCore 托管的 AirCore 整合包文件（.mrpack）前显示安全警告。"
   },
   "app.appearance-settings.unknown-pack-warning.title": {
     "message": "安装未知整合包前提醒我"
@@ -207,10 +207,10 @@
     "message": "主页与内容"
   },
   "app.behavior-settings.refocus-on-game-close.description": {
-    "message": "当 Minecraft 退出时，将Modrinth App调至前台。"
+    "message": "当 Minecraft 退出时，将AirCore调至前台。"
   },
   "app.behavior-settings.refocus-on-game-close.title": {
-    "message": "当《我的世界》关闭时，重新聚焦于Modrinth App"
+    "message": "当《我的世界》关闭时，重新聚焦于AirCore"
   },
   "app.behavior-settings.startup-and-navigation.title": {
     "message": "启动与导航"
@@ -219,7 +219,7 @@
     "message": "在你登录的所有设备上使用这些行为设置。关闭它后可以在设备上单独设置。"
   },
   "app.behavior-settings.sync-across-devices.signed-out-tooltip": {
-    "message": "登录 Modrinth 账户以同步设置。"
+    "message": "登录 AirCore 账户以同步设置。"
   },
   "app.behavior-settings.sync-across-devices.title": {
     "message": "跨设备同步行为"
@@ -516,16 +516,16 @@
     "message": "查看实例"
   },
   "app.hosting.update-required.description": {
-    "message": "你需要更新才能通过 Modrinth App 使用 Modrinth Hosting"
+    "message": "你需要更新才能通过 AirCore 使用 AirCore Hosting"
   },
   "app.hosting.update-required.download": {
     "message": "更新升级"
   },
   "app.hosting.update-required.rinthbot-alt": {
-    "message": "兴奋的 Modrinth Bot"
+    "message": "兴奋的 AirCore Bot"
   },
   "app.hosting.update-required.title": {
-    "message": "需要更新 Modrinth App"
+    "message": "需要更新 AirCore"
   },
   "app.install.phase.downloading_content": {
     "message": "正在下载内容"
@@ -852,13 +852,13 @@
     "message": "登录账户"
   },
   "app.instance.shared-instance-wrong-account.signed-out-header": {
-    "message": "你需要登录 Modrinth"
+    "message": "你需要登录 AirCore"
   },
   "app.instance.shared-instance-wrong-account.user-admonition-body-v2": {
     "message": "才能接收此共享实例的更新。"
   },
   "app.instance.shared-instance-wrong-account.warning-header": {
-    "message": "你当前使用的 Modrinth 账户不正确"
+    "message": "你当前使用的 AirCore 账户不正确"
   },
   "app.instance.shortcut.created": {
     "message": "已创建快捷方式"
@@ -1284,10 +1284,10 @@
     "message": "安装"
   },
   "app.modal.install-to-play.invite-warning": {
-    "message": "这个邀请是由另一位 Modrinth 用户创建的，而不是 Modrinth 官方。只接受你信任的人的邀请。"
+    "message": "这个邀请是由另一位 AirCore 用户创建的，而不是 AirCore 官方。只接受你信任的人的邀请。"
   },
   "app.modal.install-to-play.invite-warning-with-creator": {
-    "message": "此邀请由 <creator>{username}</creator> 创建，而非 Modrinth。只接受您信任的人发出的邀请。"
+    "message": "此邀请由 <creator>{username}</creator> 创建，而非 AirCore。只接受您信任的人发出的邀请。"
   },
   "app.modal.install-to-play.managed-content.modpack-header": {
     "message": "整合包内容"
@@ -1320,7 +1320,7 @@
     "message": "为了寻求支持，请咨询我们的<support-link>支持团队</support-link>为了发漏洞请进开启我们的一个<github-link>github-漏洞报告</github-link>。"
   },
   "app.modal.install-to-play.reviewed-files": {
-    "message": "未发布到 Modrinth 的文件未经过审核。"
+    "message": "未发布到 AirCore 的文件未经过审核。"
   },
   "app.modal.install-to-play.shared-instance": {
     "message": "共享实例"
@@ -1338,7 +1338,7 @@
     "message": "服务器整合包不可用"
   },
   "app.modal.install-to-play.unknown-files-description": {
-    "message": "这个整合包包含一些未在 Modrinth 发布的文件。我们强烈建议只从你信任的来源安装文件。"
+    "message": "这个整合包包含一些未在 AirCore 发布的文件。我们强烈建议只从你信任的来源安装文件。"
   },
   "app.modal.install-to-play.unknown-files-warning": {
     "message": "未知文件警告"
@@ -1392,7 +1392,7 @@
     "message": "Modrinth账户"
   },
   "app.nav.modrinth-hosting": {
-    "message": "Modrinth Hosting"
+    "message": "AirCore Hosting"
   },
   "app.nav.remove-account": {
     "message": "移除账户"
@@ -1401,13 +1401,13 @@
     "message": "截图"
   },
   "app.nav.sign-in-to-modrinth-account": {
-    "message": "登录到 Modrinth"
+    "message": "登录到 AirCore"
   },
   "app.nav.switch-account": {
     "message": "切换账户"
   },
   "app.nav.upgrade-to-modrinth-plus": {
-    "message": "升级至Modrinth+"
+    "message": "升级至AirCore+"
   },
   "app.nav.view-profile": {
     "message": "查看个人主页"
@@ -1623,7 +1623,7 @@
     "message": "导出为 ZIP"
   },
   "app.screenshots.selection.global-export-filename": {
-    "message": "Modrinth 截图.zip"
+    "message": "AirCore 截图.zip"
   },
   "app.screenshots.selection.instance-export-filename": {
     "message": "{instance} 截图.zip"
@@ -1653,7 +1653,7 @@
     "message": "从旧到新"
   },
   "app.settings.app-version": {
-    "message": "Modrinth App {version}"
+    "message": "AirCore {version}"
   },
   "app.settings.default-instance-options.environment-variables.description": {
     "message": "启动实例时设置的环境变量。"
@@ -1920,7 +1920,7 @@
     "message": "您的一些实例无法使用此设置"
   },
   "app.settings.game-options.compatibility.reason.launcher-controlled": {
-    "message": "此设置由 Modrinth 的启动设置管理。"
+    "message": "此设置由 AirCore 的启动设置管理。"
   },
   "app.settings.game-options.custom-value.placeholder": {
     "message": "输入一个值"
@@ -2754,16 +2754,16 @@
     "message": "macOS"
   },
   "app.settings.privacy.ads-consent.intro": {
-    "message": "广告使 Modrinth 得以运营，并为创作者报酬提供资金支持。我们的合作伙伴可能会在应用中存储或访问 Cookie，以便实现广告个性化和效果衡量。您可以在下方选择退出或管理您的偏好设置。"
+    "message": "广告使 AirCore 得以运营，并为创作者报酬提供资金支持。我们的合作伙伴可能会在应用中存储或访问 Cookie，以便实现广告个性化和效果衡量。您可以在下方选择退出或管理您的偏好设置。"
   },
   "app.settings.privacy.discord-rich-presence.description": {
-    "message": "在 Discord 上将 Modrinth App 显示为您当前的活动。这不会影响模组为游戏实例添加的 Rich Presence。需要重启应用生效。"
+    "message": "在 Discord 上将 AirCore 显示为您当前的活动。这不会影响模组为游戏实例添加的 Rich Presence。需要重启应用生效。"
   },
   "app.settings.privacy.discord-rich-presence.title": {
     "message": "Discord Rich Presence"
   },
   "app.settings.privacy.telemetry.description": {
-    "message": "Modrinth 收集匿名分析和使用数据，以提升用户体验并为您提供个性化服务。若禁用此选项，即表示您选择退出，您的数据将不再被收集。"
+    "message": "AirCore 收集匿名分析和使用数据，以提升用户体验并为您提供个性化服务。若禁用此选项，即表示您选择退出，您的数据将不再被收集。"
   },
   "app.settings.privacy.telemetry.title": {
     "message": "遥测"
@@ -2796,7 +2796,7 @@
     "message": "浏览应用目录"
   },
   "app.settings.resource-management.app-directory.description": {
-    "message": "Modrinth App存储实例和其他文件的位置。更改会在重启程序后生效。"
+    "message": "AirCore存储实例和其他文件的位置。更改会在重启程序后生效。"
   },
   "app.settings.resource-management.app-directory.select": {
     "message": "选择新的应用目录"
@@ -2805,7 +2805,7 @@
     "message": "应用目录"
   },
   "app.settings.resource-management.debug-info.description": {
-    "message": "导出应用日志和诊断数据到 ZIP 文件用于与 Modrinth 支持共享。"
+    "message": "导出应用日志和诊断数据到 ZIP 文件用于与 AirCore 支持共享。"
   },
   "app.settings.resource-management.debug-info.export": {
     "message": "导出调试信息"
@@ -2991,7 +2991,7 @@
     "message": "这些设置已在别处修改"
   },
   "app.settings.synced-options.game-settings.custom-empty": {
-    "message": "当 Modrinth 在你的某个实例中找到模组添加的设置后，它们就会显示在这里。"
+    "message": "当 AirCore 在你的某个实例中找到模组添加的设置后，它们就会显示在这里。"
   },
   "app.settings.synced-options.game-settings.description": {
     "message": "在不同的实例之间同步游戏设置。"
@@ -3324,13 +3324,13 @@
     "message": "MINECON Earth 2017"
   },
   "app.skins.section.modrinth": {
-    "message": "Modrinth"
+    "message": "AirCore"
   },
   "app.skins.section.modrinth-pride": {
-    "message": "Modrinth 精选"
+    "message": "AirCore 精选"
   },
   "app.skins.section.modrinth-pride.tooltip": {
-    "message": "你在骄傲月期间为 Modrinth 的骄傲月筹款活动捐款，因此获得了这些皮肤。"
+    "message": "你在骄傲月期间为 AirCore 的骄傲月筹款活动捐款，因此获得了这些皮肤。"
   },
   "app.skins.section.mounts-of-mayhem": {
     "message": "群骑纷争"
@@ -3366,7 +3366,7 @@
     "message": "切换至开"
   },
   "app.survey.body": {
-    "message": "您是否介意回答一些关于使用 Modrinth App 的问题？"
+    "message": "您是否介意回答一些关于使用 AirCore 的问题？"
   },
   "app.survey.footer": {
     "message": "此反馈将直接发送给Modrinth团队，为今后的更新提供指导！"
@@ -3510,13 +3510,13 @@
     "message": "同步的资源包"
   },
   "app.update-popup.body.download-complete": {
-    "message": "Modrinth App v{version} 更新已下载完成！立即重启更新，或退出时自动安装。"
+    "message": "AirCore v{version} 更新已下载完成！立即重启更新，或退出时自动安装。"
   },
   "app.update-popup.body.linux": {
-    "message": "Modrinth App v{version} 现已发布。请使用你的软件包管理器进行更新，获取最新功能与修复！"
+    "message": "AirCore v{version} 现已发布。请使用你的软件包管理器进行更新，获取最新功能与修复！"
   },
   "app.update-popup.body.metered": {
-    "message": "Modrinth App v{version} 现已发布！由于你正在使用按流量计费的网络，该更新未自动下载。"
+    "message": "AirCore v{version} 现已发布！由于你正在使用按流量计费的网络，该更新未自动下载。"
   },
   "app.update-popup.changelog": {
     "message": "更新日志"
@@ -3561,7 +3561,7 @@
     "message": "按 <shortcut>N</shortcut> 键快速创建实例"
   },
   "app.welcome-screen.title": {
-    "message": "欢迎使用 Modrinth"
+    "message": "欢迎使用 AirCore"
   },
   "app.world.server-modal.placeholder-address": {
     "message": "example.modrinth.gg"
@@ -3580,6 +3580,21 @@
   },
   "app.world.world-item.players-online": {
     "message": "{count} 人在线"
+  },
+  "browse.sort.downloads": {
+    "message": "下载量"
+  },
+  "browse.sort.follows": {
+    "message": "关注数"
+  },
+  "browse.sort.newest": {
+    "message": "发布时间"
+  },
+  "browse.sort.relevance": {
+    "message": "相关度"
+  },
+  "browse.sort.updated": {
+    "message": "更新时间"
   },
   "content.shared-instance.change-version-body": {
     "message": "更改版本只会修改你的本地副本。未来的共享实例更新可能会再次将其恢复或更改。"
@@ -3630,10 +3645,10 @@
     "message": "这可能与对方的 Minecraft 用户名不同！"
   },
   "friends.add-friend.username.placeholder": {
-    "message": "输入 Modrinth 用户名……"
+    "message": "输入 AirCore 用户名……"
   },
   "friends.add-friend.username.title": {
-    "message": "你好友的 Modrinth 用户名是什么？"
+    "message": "你好友的 AirCore 用户名是什么？"
   },
   "friends.add-friends-to-share": {
     "message": "<link>添加好友</link> 来看看他们都在玩什么！"
@@ -3678,7 +3693,7 @@
     "message": "{title} - {count}"
   },
   "friends.sign-in-to-add-friends": {
-    "message": "登录你的 <link>Modrinth 账号</link>，添加好友，看看他们在玩什么！"
+    "message": "登录你的 <link>AirCore 账号</link>，添加好友，看看他们在玩什么！"
   },
   "installation-settings.shared-instance.linked-title": {
     "message": "已关联的共享实例"
@@ -3714,7 +3729,7 @@
     "message": "解除共享实例关联"
   },
   "installation-settings.unpublish-shared-instance.modal.admonition-body": {
-    "message": "这将从 Modrinth 服务器上删除该共享实例。在 Modrinth App 中使用它的用户将停止接收更新，但你的本地实例及其内容仍会保留在此设备上。"
+    "message": "这将从 AirCore 服务器上删除该共享实例。在 AirCore 中使用它的用户将停止接收更新，但你的本地实例及其内容仍会保留在此设备上。"
   },
   "installation-settings.unpublish-shared-instance.modal.admonition-header": {
     "message": "取消发布共享实例"
@@ -3999,7 +4014,7 @@
     "message": "TNT"
   },
   "instance.icon-editor.symbol.wrenth-rinth": {
-    "message": "Modrinth 扳手"
+    "message": "AirCore 扳手"
   },
   "instance.icon-editor.symbol.zombie": {
     "message": "僵尸"
@@ -4584,7 +4599,7 @@
     "message": "登录 Microsoft 账户"
   },
   "modal.modrinth-account-required.browser-description": {
-    "message": "一个新的标签页已打开，你需要在那里完成登录，然后回到Modrinth app。"
+    "message": "一个新的标签页已打开，你需要在那里完成登录，然后回到AirCore。"
   },
   "modal.modrinth-account-required.continue-in-browser-heading": {
     "message": "请在你的浏览器中继续"
@@ -4602,10 +4617,10 @@
     "message": "再次开启浏览器"
   },
   "modal.modrinth-account-required.sign-in-button": {
-    "message": "登录 Modrinth"
+    "message": "登录 AirCore"
   },
   "modal.modrinth-account-required.sign-in-heading": {
-    "message": "登录 Modrinth 账号"
+    "message": "登录 AirCore 账号"
   },
   "modal.modrinth-account-required.signing-in-header": {
     "message": "正在登录"
@@ -4623,7 +4638,7 @@
     "message": "登录 Minecraft 账号"
   },
   "onboarding-checklist.login-modrinth": {
-    "message": "登录 Modrinth 账号"
+    "message": "登录 AirCore 账号"
   },
   "onboarding-checklist.title": {
     "message": "新手引导"
@@ -4648,5 +4663,224 @@
   },
   "settings.sidebar.label.display": {
     "message": "显示"
+  },
+  "app.home.select-instance": {
+    "message": "选择实例"
+  },
+  "app.home.launch": {
+    "message": "开始游戏"
+  },
+  "app.home.view-all": {
+    "message": "查看全部实例"
+  },
+  "app.home.search-instances": {
+    "message": "搜索实例"
+  },
+  "app.home.last-played": {
+    "message": "游玩于 {when}"
+  },
+  "app.home.never-played": {
+    "message": "从未游玩"
+  },
+  "app.home.cancel": {
+    "message": "取消"
+  },
+  "app.home.instance-count": {
+    "message": "{count} 个实例"
+  },
+  "app.home.greeting.dawn": {
+    "message": "凌晨好"
+  },
+  "app.home.greeting.morning": {
+    "message": "早上好"
+  },
+  "app.home.greeting.noon": {
+    "message": "中午好"
+  },
+  "app.home.greeting.afternoon": {
+    "message": "下午好"
+  },
+  "app.home.greeting.evening": {
+    "message": "晚上好"
+  },
+  "app.home.greeting.with-name": {
+    "message": "{greeting}，{name}"
+  },
+  "app.home.stop": {
+    "message": "结束游戏"
+  },
+  "app.home.time.just-now": {
+    "message": "刚刚"
+  },
+  "app.home.time.minutes": {
+    "message": "{count} 分钟前"
+  },
+  "app.home.time.hours": {
+    "message": "{count} 小时前"
+  },
+  "app.home.time.days": {
+    "message": "{count} 天前"
+  },
+  "app.navigation.library": {
+    "message": "实例库"
+  },
+  "app.extensions.reload": {
+    "message": "重新加载插件页面"
+  },
+  "app.extensions.not-rendered": {
+    "message": "插件页面尚未渲染（如果一直如此，请到「插件日志」查看错误）"
+  },
+  "app.extensions.disabled-title": {
+    "message": "插件已停用"
+  },
+  "app.extensions.disabled-body": {
+    "message": "到「设置 → 插件」里重新启用它，或卸载后重新安装。"
+  },
+  "app.extensions.not-found-title": {
+    "message": "插件未找到"
+  },
+  "app.extensions.not-found-body": {
+    "message": "没有名为 {id} 的面板"
+  },
+  "app.home.launch-failed": {
+    "message": "启动失败"
+  },
+  "app.home.stop-failed": {
+    "message": "结束失败"
+  },
+  "app.plugins.title": {
+    "message": "插件"
+  },
+  "app.plugins.description": {
+    "message": "插件是压缩包，放在 extensions 目录（zip 文件名 = 插件 id）。当前共 {count} 个。"
+  },
+  "app.plugins.open-folder": {
+    "message": "打开插件文件夹"
+  },
+  "app.plugins.error-title": {
+    "message": "插件错误"
+  },
+  "app.plugins.empty": {
+    "message": "还没有安装任何插件。"
+  },
+  "app.plugins.uninstall": {
+    "message": "卸载"
+  },
+  "app.plugins.no-config": {
+    "message": "这个插件没有提供配置项。"
+  },
+  "app.plugins.meta": {
+    "message": "{id} · 入口 {entry} · API v{version}"
+  },
+  "app.plugins.open-folder-failed": {
+    "message": "打开文件夹失败"
+  },
+  "app.plugins.uninstalled": {
+    "message": "已卸载"
+  },
+  "app.plugins.saved": {
+    "message": "已保存插件配置"
+  },
+  "app.plugins.save-failed": {
+    "message": "保存插件配置失败"
+  },
+  "app.plugins.list-failed": {
+    "message": "读取插件列表失败"
+  },
+  "app.plugins.diagnostics-title": {
+    "message": "被跳过的插件文件"
+  },
+  "app.skins.tab.saved": {
+    "message": "已保存皮肤"
+  },
+  "app.skins.tab.official": {
+    "message": "官方皮肤"
+  },
+  "app.home.installing": {
+    "message": "安装中…"
+  },
+  "app.library.empty.title": {
+    "message": "实例库"
+  },
+  "app.library.empty.body": {
+    "message": "还没有实例。建一个就能开始玩了。"
+  },
+  "app.library.empty.create": {
+    "message": "新建实例"
+  },
+  "app.accent.title": {
+    "message": "强调色"
+  },
+  "app.accent.description": {
+    "message": "改变启动器的主色调（按钮、选中态、加载条、侧栏渐变），底层的深色 / 浅色 / OLED 主题不变。"
+  },
+  "app.accent.preset.green": {
+    "message": "经典绿"
+  },
+  "app.accent.preset.blue": {
+    "message": "天空蓝"
+  },
+  "app.accent.preset.pink": {
+    "message": "樱花粉"
+  },
+  "app.accent.custom": {
+    "message": "自定义"
+  },
+  "app.accent.customLabel": {
+    "message": "自定义强调色"
+  },
+  "app.memory.auto": {
+    "message": "自动分配内存"
+  },
+  "app.memory.autoHint": {
+    "message": "（根据物理内存推荐，当前建议 {mb} MB）"
+  },
+  "app.memory.prelaunch": {
+    "message": "启动前优化内存"
+  },
+  "app.memory.prelaunchHint": {
+    "message": "（启动游戏前让系统回收启动器自身的冷页，不会动其他程序）"
+  },
+  "app.downloads.sourceTitle": {
+    "message": "Minecraft 下载源"
+  },
+  "app.downloads.sourceDescription": {
+    "message": "官方直连在国内很慢。切到国内镜像后，版本清单、库文件、资源文件都会从镜像下载（游戏本身的模组/整合包来源不受影响）。"
+  },
+  "app.downloads.sourceOfficial": {
+    "message": "官方（Mojang，国内较慢）"
+  },
+  "app.downloads.sourceMirror": {
+    "message": "国内镜像（BMCLAPI）"
+  },
+  "app.downloads.concurrentHint": {
+    "message": "（下载时会根据带宽在 8~96 之间自动调整，此处为初始值）"
+  },
+  "app.navigation.pluginLogs": {
+    "message": "插件日志（开发者）"
+  },
+  "app.plugins.notificationTitle": {
+    "message": "插件"
+  },
+  "app.project.translate": {
+    "message": "翻译"
+  },
+  "app.project.showOriginal": {
+    "message": "显示原文"
+  },
+  "app.project.translating": {
+    "message": "翻译中…"
+  },
+  "app.project.translateFailed": {
+    "message": "翻译失败"
+  },
+  "app.memory.optimizeNow": {
+    "message": "立即优化"
+  },
+  "app.memory.optimizeResult": {
+    "message": "已释放 {freed} MB · 可用 {available} MB · 清理了 {processes} 个进程"
+  },
+  "app.library.empty.none": {
+    "message": "还没有实例"
   }
 }

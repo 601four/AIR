@@ -24,11 +24,10 @@
 		<LanguageSettingsSelector
 			:product="product"
 			:current-locale="current.locale"
-			:locales="LOCALES"
+			:locales="SUPPORTED_LOCALES"
 			:on-locale-change="onLocaleChange"
 			:is-changing="saving"
-			:coverage-by-locale="languageCoverage[product]"
-		/>
+					/>
 	</div>
 </template>
 
@@ -47,6 +46,9 @@ const props = defineProps<{
 	product: 'app' | 'website'
 	persistLocale?: (locale: string) => void | Promise<void>
 }>()
+
+// 当前只维护中文与英文，不再展示其他语言与翻译完成度
+const SUPPORTED_LOCALES = LOCALES.filter((item) => item.code === 'zh-CN' || item.code === 'en-US')
 
 const { formatMessage } = useVIntl()
 const { locale, setLocale } = injectI18n()

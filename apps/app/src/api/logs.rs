@@ -36,6 +36,18 @@ pub fn logs_log_webview<R: tauri::Runtime>(
     message: &str,
 ) {
     let label = webview.label();
+
+    // 开发模式下 Vue 会把整个组件树（含 MultiStageModal 的 stages 源码）塞进
+    // 警告字符串里，单条可达十几 MB，重复触发会直接把内存和日志撑爆、界面卡死。
+    // 这里直接丢掉超大消息和这两条已知的"组件被响应式化"警告。
+    const MAX_WEBVIEW_LOG_LEN: usize = 4096;
+    if message.len() > MAX_WEBVIEW_LOG_LEN
+        || message.contains("was made a reactive object")
+        || message.contains("Component that was made reactive")
+    {
+        return;
+    }
+
     match level {
         "trace" => {
             tracing::trace!(target: "webview", webview = label, "{message}")

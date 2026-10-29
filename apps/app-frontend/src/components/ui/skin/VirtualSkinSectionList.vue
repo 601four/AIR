@@ -140,21 +140,28 @@ const cardHeight = computed(
 	() => (cardWidth.value * SKIN_CARD_ASPECT_HEIGHT) / SKIN_CARD_ASPECT_WIDTH,
 )
 
-const sections = computed<SkinSection[]>(() => [
-	{
-		key: 'saved-skins',
-		title: formatMessage(messages.savedSkinsSection),
-		kind: 'saved',
-		skins: props.savedSkins,
-	},
-	...props.defaultSkinSections.map((section) => ({
-		key: defaultSkinSectionKey(section.title),
-		title: section.title,
-		kind: 'default' as const,
-		infoTooltip: section.infoTooltip,
-		skins: section.skins,
-	})),
-])
+const sections = computed<SkinSection[]>(() => {
+	const list: SkinSection[] = []
+	// 只在「已保存」页签（或没有官方分组时）才显示已保存皮肤分组
+	if (props.savedSkins.length > 0 || props.defaultSkinSections.length === 0) {
+		list.push({
+			key: 'saved-skins',
+			title: formatMessage(messages.savedSkinsSection),
+			kind: 'saved',
+			skins: props.savedSkins,
+		})
+	}
+	list.push(
+		...props.defaultSkinSections.map((section) => ({
+			key: defaultSkinSectionKey(section.title),
+			title: section.title,
+			kind: 'default' as const,
+			infoTooltip: section.infoTooltip,
+			skins: section.skins,
+		})),
+	)
+	return list
+})
 
 const draggableSavedSkins = ref<Skin[]>([])
 const isDraggingSavedSkin = ref(false)

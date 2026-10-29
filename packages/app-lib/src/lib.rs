@@ -8,7 +8,7 @@ and launching Modrinth mod packs
 #![deny(unused_must_use)]
 
 #[macro_use]
-mod util;
+pub mod util;
 
 mod api;
 mod error;
