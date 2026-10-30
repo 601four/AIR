@@ -4,7 +4,7 @@
 			class="progress-bar__fill"
 			:style="{
 				width: `${progress}%`,
-				'background-color': error ? 'var(--color-red)' : 'var(--color-brand)',
+				'background-color': error ? 'var(--color-red)' : color,
 			}"
 		></div>
 	</div>
@@ -22,6 +22,11 @@ defineProps({
 	error: {
 		type: Boolean,
 		default: false,
+	},
+	/** 颜色：不填时用强调色变量 */
+	color: {
+		type: String,
+		default: 'var(--color-brand)',
 	},
 })
 </script>

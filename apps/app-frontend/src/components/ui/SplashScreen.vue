@@ -3,7 +3,11 @@
 		<div v-if="!doneLoading" class="splash-screen" :class="`${theme.active}-mode`">
 			<div class="app-logo-wrapper" data-tauri-drag-region>
 				<span class="app-logo-text">AirCore</span>
-				<ProgressBar class="loading-bar" :progress="Math.min(loadingProgress, 100)" />
+				<ProgressBar
+					class="loading-bar"
+					:progress="Math.min(loadingProgress, 100)"
+					:color="accentColor"
+				/>
 				<span v-if="message">{{ message }}</span>
 			</div>
 			<div class="gradient-bg" data-tauri-drag-region></div>
@@ -19,12 +23,14 @@ import { invoke } from '@tauri-apps/api/core'
 import { onMounted, ref, watch } from 'vue'
 
 import ProgressBar from '@/components/ui/ProgressBar.vue'
-import { applyAccentColor } from '@/composables/use-accent-color'
+import { applyAccentColor, useAccentColor } from '@/composables/use-accent-color'
 import { useAppEvent } from '@/composables/use-app-event'
 import { useTheme } from '@/composables/use-theme.ts'
 import { debugStartup } from '@/helpers/startup-debug'
 
 const theme = useTheme()
+// 直接用响应式强调色给进度条上色，不依赖 CSS 变量的时机
+const { accentColor } = useAccentColor()
 
 const doneLoading = ref(false)
 const loadingProgress = ref(0)
@@ -44,7 +50,10 @@ onMounted(async () => {
 			accent = prefs?.['aircore-accent-color'] ?? null
 			if (accent) window.localStorage.setItem('aircore-accent-color', accent)
 		}
-		if (accent) applyAccentColor(accent)
+		if (accent) {
+			accentColor.value = accent
+			applyAccentColor(accent)
+		}
 	} catch {
 		// ignore
 	}
