@@ -15,9 +15,11 @@
 
 <script setup>
 import { injectLoadingState } from '@modrinth/ui'
+import { invoke } from '@tauri-apps/api/core'
 import { onMounted, ref, watch } from 'vue'
 
 import ProgressBar from '@/components/ui/ProgressBar.vue'
+import { applyAccentColor } from '@/composables/use-accent-color'
 import { useAppEvent } from '@/composables/use-app-event'
 import { useTheme } from '@/composables/use-theme.ts'
 import { debugStartup } from '@/helpers/startup-debug'
@@ -32,7 +34,21 @@ const MIN_DISPLAY_MS = 500
 const mountedAt = Date.now()
 
 const loading = injectLoadingState()
-onMounted(() => debugStartup('Splash mounted'))
+onMounted(async () => {
+	debugStartup('Splash mounted')
+	// 闪屏阶段就把强调色应用上：本地没有时从数据库偏好里补
+	try {
+		let accent = window.localStorage.getItem('aircore-accent-color')
+		if (!accent) {
+			const prefs = await invoke('plugin:utils|prefs_get_all')
+			accent = prefs?.['aircore-accent-color'] ?? null
+			if (accent) window.localStorage.setItem('aircore-accent-color', accent)
+		}
+		if (accent) applyAccentColor(accent)
+	} catch {
+		// ignore
+	}
+})
 
 function onAfterLeave() {
 	debugStartup('Splash fade completed', { displayedMs: Date.now() - mountedAt })
