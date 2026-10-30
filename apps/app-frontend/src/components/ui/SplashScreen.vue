@@ -100,10 +100,10 @@ useAppEvent('loading', (e) => {
 	inset: 0;
 	z-index: 10000;
 
-	--splash-cube-image: url('@/assets/loading/cube-white.png');
+	--splash-cube-image: url('@/assets/loading/cube.png');
 
 	&.light-mode {
-		--splash-cube-image: url('@/assets/loading/cube-white-light.png');
+		--splash-cube-image: url('@/assets/loading/cube-light.webp');
 	}
 }
 
@@ -145,17 +145,8 @@ useAppEvent('loading', (e) => {
 	height: 100vh;
 	width: 100vw;
 	background:
-		linear-gradient(
-			180deg,
-			color-mix(in srgb, var(--color-brand) 22%, transparent) 0%,
-			color-mix(in srgb, var(--color-brand) 8%, transparent) 55%,
-			color-mix(in srgb, var(--color-brand) 18%, transparent) 100%
-		),
-		linear-gradient(
-			0deg,
-			color-mix(in srgb, var(--color-brand) 10%, transparent),
-			color-mix(in srgb, var(--color-brand) 10%, transparent)
-		);
+		linear-gradient(180deg, var(--splash-tint-top) 0%, var(--splash-tint-bottom) 97.29%),
+		linear-gradient(0deg, var(--splash-overlay), var(--splash-overlay));
 	z-index: 9997;
 }
 
@@ -176,11 +167,10 @@ useAppEvent('loading', (e) => {
 		content: '';
 		position: absolute;
 		inset: 0;
-		/* 纯白图作为遮罩，颜色来自强调色 */
-		background-color: var(--color-brand);
-		-webkit-mask: var(--splash-cube-image) center / contain no-repeat;
-		mask: var(--splash-cube-image) center / contain no-repeat;
-		opacity: var(--splash-cube-opacity, 0.28);
+		background: var(--splash-cube-image) center no-repeat;
+		background-size: contain;
+		opacity: var(--splash-cube-opacity);
+		mix-blend-mode: var(--splash-cube-blend);
 	}
 }
 
