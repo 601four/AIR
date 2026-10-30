@@ -711,10 +711,10 @@ pub async fn fetch_file(
 	let original_url = url.to_string();
 	// 同一类资源已判定镜像缺失时，直接走官方源，不再浪费一次 404
 	let category = crate::util::mirror::category(url);
-	let mirrored_url = if crate::util::mirror::current_source() == crate::util::mirror::DownloadSource::Bmclapi
-		&& !crate::util::mirror::is_broken(category)
-	{
-		crate::util::mirror::rewrite_url(url)
+	// rewrite_url 内部会判断当前下载源；这里只要确认地址确实被改写且该类别镜像未失效
+	let rewritten = crate::util::mirror::rewrite_url(url);
+	let mirrored_url = if rewritten != url && !crate::util::mirror::is_broken(category) {
+		rewritten
 	} else {
 		url.to_string()
 	};

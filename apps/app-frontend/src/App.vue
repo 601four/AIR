@@ -663,6 +663,18 @@ onMounted(async () => {
 		// 忽略
 	}
 
+	// 启动时恢复加载器下载源
+	try {
+		const loaderMode = localStorage.getItem('aircore-loader-mode') ?? 'cn'
+		const loaderPrefix = localStorage.getItem('aircore-loader-prefix') ?? ''
+		void invoke('plugin:utils|set_loader_source', {
+			mode: loaderMode,
+			prefix: loaderPrefix || null,
+		})
+	} catch {
+		// 忽略
+	}
+
 	// 恢复强调色
 	try {
 		const { applyAccentColor } = await import('@/composables/use-accent-color')

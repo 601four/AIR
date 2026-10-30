@@ -46,6 +46,26 @@ watch(downloadSource, async (value) => {
 	await invoke('plugin:utils|set_download_source', { source: value }).catch(() => {})
 })
 
+// 加载器下载源（Fabric / Quilt / Forge / NeoForge）
+const LOADER_MODE_KEY = 'aircore-loader-mode'
+const LOADER_PREFIX_KEY = 'aircore-loader-prefix'
+const loaderMode = ref(localStorage.getItem(LOADER_MODE_KEY) ?? 'cn')
+const loaderMirror = ref(localStorage.getItem(LOADER_PREFIX_KEY) ?? '')
+const loaderModeChoices = computed(() => [
+	{ value: 'official', label: formatMessage(messages.loaderSourceOfficial) },
+	{ value: 'cn', label: formatMessage(messages.loaderSourceCn) },
+	{ value: 'custom', label: formatMessage(messages.loaderSourceCustom) },
+])
+watch([loaderMode, loaderMirror], async () => {
+	const prefix = loaderMode.value === 'custom' ? loaderMirror.value.trim() : ''
+	setPref(LOADER_MODE_KEY, loaderMode.value)
+	setPref(LOADER_PREFIX_KEY, prefix)
+	await invoke('plugin:utils|set_loader_source', {
+		mode: loaderMode.value,
+		prefix: prefix || null,
+	}).catch(() => {})
+})
+
 const messages = defineMessages({
 	downloadSourceTitle: { id: 'app.downloads.sourceTitle', defaultMessage: 'Minecraft download source' },
 	downloadSourceDescription: {
@@ -65,6 +85,25 @@ const messages = defineMessages({
 		id: 'app.downloads.concurrentHint',
 		defaultMessage:
 			'Auto-tuned between 8 and 96 based on bandwidth; this is the initial value.',
+	},
+	loaderSourceTitle: {
+		id: 'app.downloads.loaderSourceTitle',
+		defaultMessage: 'Mod loader download source',
+	},
+	loaderSourceDescription: {
+		id: 'app.downloads.loaderSourceDescription',
+		defaultMessage:
+			'Where Fabric / Quilt / Forge / NeoForge libraries are downloaded from. Use a mirror prefix that passes Maven paths through, e.g. https://mirror.example.com/maven',
+	},
+	loaderSourceOfficial: { id: 'app.downloads.loaderSourceOfficial', defaultMessage: 'Official (direct)' },
+	loaderSourceCn: {
+		id: 'app.downloads.loaderSourceCn',
+		defaultMessage: 'China acceleration (Maven Central via Aliyun)',
+	},
+	loaderSourceCustom: { id: 'app.downloads.loaderSourceCustom', defaultMessage: 'Custom mirror' },
+	loaderSourcePlaceholder: {
+		id: 'app.downloads.loaderSourcePlaceholder',
+		defaultMessage: 'https://mirror.example.com/maven',
 	},
 	dataDirTitle: { id: 'app.dataDir.title', defaultMessage: 'Account data directory' },
 	dataDirDescription: {
@@ -219,6 +258,24 @@ async function findLauncherDir() {
 				v-model="downloadSource"
 				:options="downloadSourceChoices"
 				trigger-type="base"
+			/>
+		</div>
+	</section>
+
+	<section class="mb-6 border-0 border-b border-solid border-divider pb-6">
+		<h2 class="m-0 text-lg font-semibold text-contrast">{{ formatMessage(messages.loaderSourceTitle) }}</h2>
+		<p class="m-0 mt-1 text-secondary">{{ formatMessage(messages.loaderSourceDescription) }}</p>
+		<div class="mt-3 flex flex-col gap-2">
+			<div class="w-[16rem]">
+				<Combobox v-model="loaderMode" :options="loaderModeChoices" trigger-type="base" />
+			</div>
+			<Input
+				v-if="loaderMode === 'custom'"
+				id="loaderMirror"
+				v-model="loaderMirror"
+				type="text"
+				:placeholder="formatMessage(messages.loaderSourcePlaceholder)"
+				wrapper-class="w-full"
 			/>
 		</div>
 	</section>

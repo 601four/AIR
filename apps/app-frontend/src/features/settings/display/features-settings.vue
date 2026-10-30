@@ -18,6 +18,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/vue-query'
 import { onBeforeUnmount, onMounted } from 'vue'
 
 import { useAppSettings } from '@/composables/use-app-settings.ts'
+import { useSidebarNews } from '@/composables/use-sidebar-news'
 import {
 	QUICK_INSTANCE_LIMIT_MAX,
 	useQuickInstanceLimit,
@@ -41,6 +42,8 @@ const settingsModal = injectAppSettingsModal()
 const quickInstances = useQuickInstanceLimit()
 const queryClient = useQueryClient()
 
+const { sidebarNewsEnabled, setSidebarNewsEnabled } = useSidebarNews()
+
 const messages = defineMessages({
 	instancePagesTitle: {
 		id: 'app.features-settings.instance-pages.title',
@@ -57,6 +60,14 @@ const messages = defineMessages({
 	showScreenshotsTabTitle: {
 		id: 'app.features-settings.show-screenshots-tab.title',
 		defaultMessage: 'Show Screenshots tab in instances',
+	},
+	sidebarNewsTitle: {
+		id: 'app.features-settings.sidebar-news.title',
+		defaultMessage: 'Show Minecraft news in sidebar',
+	},
+	sidebarNewsDescription: {
+		id: 'app.features-settings.sidebar-news.description',
+		defaultMessage: 'Show recent Minecraft news in the right sidebar. Clicking an item opens the article.',
 	},
 	sidebarTitle: {
 		id: 'app.features-settings.sidebar.title',
@@ -277,6 +288,21 @@ onBeforeUnmount(() => {
 			{{ formatMessage(messages.sidebarTitle) }} <!-- 显示：侧边栏 -->
 		</h2>
 		<div class="mt-4 flex flex-col gap-6">
+			<div class="flex items-center justify-between gap-4">
+				<div>
+					<h3 class="m-0 text-lg font-semibold text-contrast">
+						{{ formatMessage(messages.sidebarNewsTitle) }}
+					</h3>
+					<p class="m-0 mt-1">{{ formatMessage(messages.sidebarNewsDescription) }}</p>
+				</div>
+				<Toggle
+					id="show-minecraft-news-in-sidebar"
+					:model-value="sidebarNewsEnabled"
+					:aria-label="formatMessage(messages.sidebarNewsTitle)"
+					@update:model-value="(value) => setSidebarNewsEnabled(Boolean(value))"
+				/>
+			</div>
+
 			<div class="flex items-center justify-between gap-4">
 				<div>
 					<h3 class="m-0 text-lg font-semibold text-contrast">

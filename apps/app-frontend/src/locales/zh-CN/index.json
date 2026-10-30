@@ -4906,5 +4906,32 @@
   },
   "app.accent.preset.red": {
     "message": "朱红"
+  },
+  "app.sidebar.minecraft-news.title": {
+    "message": "Minecraft 新闻"
+  },
+  "app.features-settings.sidebar-news.title": {
+    "message": "在侧边栏显示 Minecraft 新闻"
+  },
+  "app.features-settings.sidebar-news.description": {
+    "message": "在右侧边栏显示最近的 Minecraft 新闻，点击打开对应文章。"
+  },
+  "app.downloads.loaderSourceTitle": {
+    "message": "加载器下载源"
+  },
+  "app.downloads.loaderSourceDescription": {
+    "message": "Fabric / Quilt / Forge / NeoForge 库文件的下载来源。可填一个支持 Maven 路径透传的镜像前缀，例如 https://mirror.example.com/maven"
+  },
+  "app.downloads.loaderSourceOfficial": {
+    "message": "官方（直连）"
+  },
+  "app.downloads.loaderSourceCustom": {
+    "message": "自定义镜像"
+  },
+  "app.downloads.loaderSourcePlaceholder": {
+    "message": "https://mirror.example.com/maven"
+  },
+  "app.downloads.loaderSourceCn": {
+    "message": "国内加速（Maven Central 走阿里云）"
   }
 }

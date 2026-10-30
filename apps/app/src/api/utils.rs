@@ -54,6 +54,8 @@ pub fn init<R: Runtime>() -> tauri::plugin::TauriPlugin<R> {
             super::thumbnails::get_image_thumbnail,
             optimize_launcher_memory,
             set_download_source,
+            set_loader_source,
+            get_loader_source,
             prefs_get_all,
             debug_log_append,
             get_data_dir,
@@ -372,6 +374,32 @@ pub fn set_data_dir<R: tauri::Runtime>(
 ) -> std::result::Result<(), String> {
     let identifier = app.config().identifier.clone();
     theseus::data_dir::set_configured_dir(&identifier, path).map_err(|e| e.to_string())
+}
+
+/// 设置加载器下载源：mode = official | cn | custom
+#[tauri::command]
+pub fn set_loader_source(mode: Option<String>, prefix: Option<String>) -> bool {
+    let mode = match mode.as_deref() {
+        Some("official") => theseus::util::mirror::LoaderSource::Official,
+        Some("custom") => theseus::util::mirror::LoaderSource::Custom,
+        _ => theseus::util::mirror::LoaderSource::Cn,
+    };
+    theseus::util::mirror::set_loader_source(mode, prefix);
+    true
+}
+
+/// 读取当前加载器下载源
+#[tauri::command]
+pub fn get_loader_source() -> serde_json::Value {
+    let mode = match theseus::util::mirror::current_loader_mode() {
+        theseus::util::mirror::LoaderSource::Official => "official",
+        theseus::util::mirror::LoaderSource::Cn => "cn",
+        theseus::util::mirror::LoaderSource::Custom => "custom",
+    };
+    serde_json::json!({
+        "mode": mode,
+        "prefix": theseus::util::mirror::current_loader_prefix(),
+    })
 }
 
 /// 切换 Minecraft 下载源："official" | "bmclapi"

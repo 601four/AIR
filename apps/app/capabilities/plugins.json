@@ -35,6 +35,9 @@
 					"url": "https://api.mclo.gs/*"
 				},
 				{
+					"url": "https://launchercontent.mojang.com/*"
+				},
+				{
 					"url": "https://fill.papermc.io/*"
 				},
 				{

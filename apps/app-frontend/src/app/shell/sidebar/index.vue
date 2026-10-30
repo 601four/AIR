@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { defineMessages, useScrollIndicator, useVIntl } from '@modrinth/ui'
+import SidebarMinecraftNews from '@/components/ui/SidebarMinecraftNews.vue'
 import PluginErrorBoundary from '@/components/ui/PluginErrorBoundary.vue'
 import { pluginRegistry } from '@/plugin-host'
 import { dispatchSandboxEvent, sandboxTrees } from '@/plugin-host'
@@ -180,6 +181,9 @@ const messages = defineMessages({
 							<component :is="section.component" />
 						</PluginErrorBoundary>
 					</div>
+
+					<!-- Minecraft 官方新闻（插件分区下方） -->
+					<SidebarMinecraftNews />
 				</div>
 			</div>
 			<div

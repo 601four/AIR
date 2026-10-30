@@ -395,6 +395,8 @@ fn main() {
                         "get_opening_command",
                         "get_image_thumbnail",
                     "set_download_source",
+                    "set_loader_source",
+                    "get_loader_source",
                     "prefs_get_all",
                     "prefs_set",
                     "debug_log_append",

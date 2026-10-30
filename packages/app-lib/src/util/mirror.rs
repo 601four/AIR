@@ -31,6 +31,62 @@ pub fn current_source() -> DownloadSource {
 
 const BMCLAPI: &str = "https://bmclapi2.bangbang93.com";
 
+/// 加载器下载源模式
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum LoaderSource {
+	/// 官方直连
+	Official,
+	/// 国内加速：Maven Central 走阿里云，其他保持官方
+	Cn,
+	/// 自定义镜像前缀（要求路径透传）
+	Custom,
+}
+
+static LOADER_MODE: AtomicU8 = AtomicU8::new(1);
+static LOADER_PREFIX: std::sync::OnceLock<std::sync::Mutex<Option<String>>> =
+	std::sync::OnceLock::new();
+
+fn loader_prefix() -> &'static std::sync::Mutex<Option<String>> {
+	LOADER_PREFIX.get_or_init(|| std::sync::Mutex::new(None))
+}
+
+/// 设置加载器下载源
+pub fn set_loader_source(mode: LoaderSource, prefix: Option<String>) {
+	LOADER_MODE.store(
+		match mode {
+			LoaderSource::Official => 0,
+			LoaderSource::Cn => 1,
+			LoaderSource::Custom => 2,
+		},
+		Ordering::Relaxed,
+	);
+	let cleaned = prefix.and_then(|value| {
+		let trimmed = value.trim().trim_end_matches('/').to_string();
+		if trimmed.is_empty() {
+			None
+		} else {
+			Some(trimmed)
+		}
+	});
+	if let Ok(mut guard) = loader_prefix().lock() {
+		*guard = cleaned;
+	}
+}
+
+pub fn current_loader_mode() -> LoaderSource {
+	match LOADER_MODE.load(Ordering::Relaxed) {
+		0 => LoaderSource::Official,
+		2 => LoaderSource::Custom,
+		_ => LoaderSource::Cn,
+	}
+}
+
+pub fn current_loader_prefix() -> Option<String> {
+	loader_prefix().lock().ok().and_then(|guard| guard.clone())
+}
+
+const ALIYUN_MAVEN: &str = "https://maven.aliyun.com/repository/public";
+
 /// 把 Mojang 官方地址重写为镜像地址（仅开启镜像时）
 pub fn rewrite_url(url: &str) -> String {
 	if current_source() == DownloadSource::Official {
@@ -50,6 +106,35 @@ pub fn rewrite_url(url: &str) -> String {
 			return format!("{to}{rest}");
 		}
 	}
+
+	// 加载器 maven
+	match current_loader_mode() {
+		LoaderSource::Official => {}
+		LoaderSource::Cn => {
+			// Maven Central 走阿里云镜像；Fabric/Forge 仓库暂无可靠国内镜像，保持官方
+			if let Some(rest) = url.strip_prefix("https://repo1.maven.org/maven2") {
+				return format!("{ALIYUN_MAVEN}{rest}");
+			}
+		}
+		LoaderSource::Custom => {
+			if let Some(prefix) = current_loader_prefix() {
+				const LOADER_HOSTS: [&str; 6] = [
+					"https://maven.fabricmc.net",
+					"https://maven.quiltmc.org",
+					"https://maven.minecraftforge.net",
+					"https://files.minecraftforge.net",
+					"https://maven.neoforged.net/releases",
+					"https://maven.neoforged.net",
+				];
+				for host in LOADER_HOSTS {
+					if let Some(rest) = url.strip_prefix(host) {
+						return format!("{prefix}{rest}");
+					}
+				}
+			}
+		}
+	}
+
 	url.to_string()
 }
 

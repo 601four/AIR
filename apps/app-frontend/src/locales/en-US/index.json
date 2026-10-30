@@ -4906,5 +4906,32 @@
   },
   "app.accent.preset.red": {
     "message": "Vermilion"
+  },
+  "app.sidebar.minecraft-news.title": {
+    "message": "Minecraft news"
+  },
+  "app.features-settings.sidebar-news.title": {
+    "message": "Show Minecraft news in sidebar"
+  },
+  "app.features-settings.sidebar-news.description": {
+    "message": "Show recent Minecraft news in the right sidebar. Clicking an item opens the article."
+  },
+  "app.downloads.loaderSourceTitle": {
+    "message": "Mod loader download source"
+  },
+  "app.downloads.loaderSourceDescription": {
+    "message": "Where Fabric / Quilt / Forge / NeoForge libraries are downloaded from. Use a mirror prefix that passes Maven paths through, e.g. https://mirror.example.com/maven"
+  },
+  "app.downloads.loaderSourceOfficial": {
+    "message": "Official (direct)"
+  },
+  "app.downloads.loaderSourceCustom": {
+    "message": "Custom mirror"
+  },
+  "app.downloads.loaderSourcePlaceholder": {
+    "message": "https://mirror.example.com/maven"
+  },
+  "app.downloads.loaderSourceCn": {
+    "message": "China acceleration (Maven Central via Aliyun)"
   }
 }
