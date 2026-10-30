@@ -127,8 +127,18 @@ useAppEvent('loading', (e) => {
 
 	--splash-cube-image: url('@/assets/loading/cube.png');
 
+	/* 强调色混入深色底：保持暗色调，不会变亮 */
+	--splash-base: color-mix(in srgb, var(--color-brand) 9%, #0c0f12);
+	--splash-tint-top: color-mix(in srgb, var(--color-brand) 14%, transparent);
+	--splash-tint-bottom: color-mix(in srgb, var(--color-brand) 6%, transparent);
+	--splash-overlay: color-mix(in srgb, var(--color-brand) 5%, transparent);
+
 	&.light-mode {
 		--splash-cube-image: url('@/assets/loading/cube-light.webp');
+		--splash-base: color-mix(in srgb, var(--color-brand) 5%, #eef1f4);
+		--splash-tint-top: color-mix(in srgb, var(--color-brand) 10%, transparent);
+		--splash-tint-bottom: color-mix(in srgb, var(--color-brand) 4%, transparent);
+		--splash-overlay: color-mix(in srgb, var(--color-brand) 3%, transparent);
 	}
 }
 
@@ -184,7 +194,7 @@ useAppEvent('loading', (e) => {
 
 	width: 180vw;
 	height: 180vh;
-	background-color: var(--color-bg);
+	background-color: var(--splash-base);
 
 	z-index: 9996;
 
@@ -205,7 +215,7 @@ useAppEvent('loading', (e) => {
 	left: 0;
 	width: 100%;
 	height: 100%;
-	background: var(--color-bg);
+	background: var(--splash-base);
 	z-index: 9995;
 }
 </style>
