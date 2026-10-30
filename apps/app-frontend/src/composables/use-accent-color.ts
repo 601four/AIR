@@ -9,7 +9,11 @@ export interface AccentOption {
 	color: string
 }
 
+// 新玩家的默认强调色
+export const DEFAULT_ACCENT = '#ff5050'
+
 export const ACCENT_OPTIONS: AccentOption[] = [
+	{ id: 'red', name: '朱红', color: '#ff5050' },
 	{ id: 'green', name: '经典绿', color: '#1bd96a' },
 	{ id: 'blue', name: '天空蓝', color: '#3b82f6' },
 	{ id: 'pink', name: '樱花粉', color: '#ec4899' },
@@ -19,9 +23,9 @@ const STORAGE_KEY = 'aircore-accent-color'
 
 function readStored(): string {
 	try {
-		return window.localStorage.getItem(STORAGE_KEY) ?? '#1bd96a'
+		return window.localStorage.getItem(STORAGE_KEY) ?? DEFAULT_ACCENT
 	} catch {
-		return '#1bd96a'
+		return DEFAULT_ACCENT
 	}
 }
 
@@ -112,7 +116,7 @@ export function useAccentColor() {
 		setPref(STORAGE_KEY, color)
 	}
 
-	const reset = () => setAccent('#1bd96a')
+	const reset = () => setAccent(DEFAULT_ACCENT)
 
 
 	return {

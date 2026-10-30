@@ -81,7 +81,8 @@ const messages = defineMessages({
 
 const { accentColor, isCustom, setAccent } = useAccentColor()
 
-const ACCENT_LABELS = {
+const ACCENT_LABELS: Record<string, { id: string; defaultMessage: string }> = {
+	red: { id: 'app.accent.preset.red', defaultMessage: 'Coral red' },
 	green: { id: 'app.accent.preset.green', defaultMessage: 'Classic green' },
 	blue: { id: 'app.accent.preset.blue', defaultMessage: 'Sky blue' },
 	pink: { id: 'app.accent.preset.pink', defaultMessage: 'Cherry pink' },

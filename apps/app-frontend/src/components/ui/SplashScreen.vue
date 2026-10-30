@@ -1,6 +1,11 @@
 <template>
 	<Transition name="splash-fade" @after-leave="onAfterLeave">
-		<div v-if="!doneLoading" class="splash-screen" :class="`${theme.active}-mode`">
+		<div
+			v-if="!doneLoading"
+			class="splash-screen"
+			:class="`${theme.active}-mode`"
+			:style="splashTintStyle"
+		>
 			<div class="app-logo-wrapper" data-tauri-drag-region>
 				<span class="app-logo-text">AirCore</span>
 				<ProgressBar
@@ -20,10 +25,10 @@
 <script setup>
 import { injectLoadingState } from '@modrinth/ui'
 import { invoke } from '@tauri-apps/api/core'
-import { onMounted, ref, watch } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 
 import ProgressBar from '@/components/ui/ProgressBar.vue'
-import { applyAccentColor, useAccentColor } from '@/composables/use-accent-color'
+import { applyAccentColor, DEFAULT_ACCENT, useAccentColor } from '@/composables/use-accent-color'
 import { useAppEvent } from '@/composables/use-app-event'
 import { useTheme } from '@/composables/use-theme.ts'
 import { debugStartup } from '@/helpers/startup-debug'
@@ -31,6 +36,22 @@ import { debugStartup } from '@/helpers/startup-debug'
 const theme = useTheme()
 // 直接用响应式强调色给进度条上色，不依赖 CSS 变量的时机
 const { accentColor } = useAccentColor()
+
+// 和进度条一样：不靠 CSS 变量的默认值，直接根据强调色算出渐变颜色
+const splashTintStyle = computed(() => {
+	const accent = accentColor.value
+	if (!accent) return {}
+	if (theme.active === 'light') {
+		return {
+			'--splash-tint-top': `color-mix(in srgb, ${accent} 30%, transparent)`,
+			'--splash-tint-bottom': `color-mix(in srgb, ${accent} 10%, transparent)`,
+		}
+	}
+	return {
+		'--splash-tint-top': `color-mix(in srgb, ${accent} 28%, transparent)`,
+		'--splash-tint-bottom': `color-mix(in srgb, ${accent} 12%, #11232b)`,
+	}
+})
 
 const doneLoading = ref(false)
 const loadingProgress = ref(0)
@@ -50,10 +71,9 @@ onMounted(async () => {
 			accent = prefs?.['aircore-accent-color'] ?? null
 			if (accent) window.localStorage.setItem('aircore-accent-color', accent)
 		}
-		if (accent) {
-			accentColor.value = accent
-			applyAccentColor(accent)
-		}
+		accent = accent || DEFAULT_ACCENT
+		accentColor.value = accent
+		applyAccentColor(accent)
 	} catch {
 		// ignore
 	}
@@ -127,18 +147,8 @@ useAppEvent('loading', (e) => {
 
 	--splash-cube-image: url('@/assets/loading/cube.png');
 
-	/* 强调色混入深色底：保持暗色调，不会变亮 */
-	--splash-base: color-mix(in srgb, var(--color-brand) 9%, #0c0f12);
-	--splash-tint-top: color-mix(in srgb, var(--color-brand) 14%, transparent);
-	--splash-tint-bottom: color-mix(in srgb, var(--color-brand) 6%, transparent);
-	--splash-overlay: color-mix(in srgb, var(--color-brand) 5%, transparent);
-
 	&.light-mode {
 		--splash-cube-image: url('@/assets/loading/cube-light.webp');
-		--splash-base: color-mix(in srgb, var(--color-brand) 5%, #eef1f4);
-		--splash-tint-top: color-mix(in srgb, var(--color-brand) 10%, transparent);
-		--splash-tint-bottom: color-mix(in srgb, var(--color-brand) 4%, transparent);
-		--splash-overlay: color-mix(in srgb, var(--color-brand) 3%, transparent);
 	}
 }
 
@@ -194,7 +204,7 @@ useAppEvent('loading', (e) => {
 
 	width: 180vw;
 	height: 180vh;
-	background-color: var(--splash-base);
+	background-color: var(--color-bg);
 
 	z-index: 9996;
 
@@ -215,7 +225,7 @@ useAppEvent('loading', (e) => {
 	left: 0;
 	width: 100%;
 	height: 100%;
-	background: var(--splash-base);
+	background: var(--color-bg);
 	z-index: 9995;
 }
 </style>

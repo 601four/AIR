@@ -5,7 +5,7 @@ import { VueQueryPlugin } from '@tanstack/vue-query'
 import { createApp } from 'vue'
 
 import App from '@/App.vue'
-import { applyAccentColor } from '@/composables/use-accent-color'
+import { applyAccentColor, DEFAULT_ACCENT } from '@/composables/use-accent-color'
 import { overlayScrollbarsDirective } from '@/directives/overlayScrollbars'
 import { setupErrorReporting } from '@/helpers/error-reporting'
 import { debugStartup, traceStartupStep } from '@/helpers/startup-debug'
@@ -18,7 +18,7 @@ debugStartup('Frontend entry module evaluated')
 // 尽早应用用户的强调色：让启动闪屏就使用偏好色而不是默认绿
 try {
 	const storedAccent = window.localStorage.getItem('aircore-accent-color')
-	if (storedAccent) applyAccentColor(storedAccent)
+	applyAccentColor(storedAccent || DEFAULT_ACCENT)
 } catch {
 	// ignore
 }
