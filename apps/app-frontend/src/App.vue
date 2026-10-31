@@ -697,24 +697,29 @@ onMounted(async () => {
 	}).catch(() => {})
 
 	// CurseForge 整合包：安装结束后才提示哪些模组没能自动安装
-	useAppEvent('install_job', (job) => {
-		if (!isInstallJobFinished(job.status)) return
-		void cleanupCurseForgeTempPack(job.job_id)
-		const notice = takeCurseForgeNotice(job.job_id)
-		if (!notice) return
-		const names = notice.manual.map((file) => file.display_name || file.file_name)
-		const shown = names.slice(0, 8).join('、')
-		const more = names.length > 8 ? ` 等 ${names.length} 个` : ''
-		notificationManager?.addNotification?.({
-			type: 'warning',
-			title: notice.title,
-			text: `有 ${names.length} 个模组没能自动安装：${shown}${more}。可到 CurseForge 搜索这些名字手动下载。`,
-		})
-	})
+	useAppEvent(
+		'install_job',
+		(job) => {
+			if (!isInstallJobFinished(job.status)) return
+			void cleanupCurseForgeTempPack(job.job_id)
+			const notice = takeCurseForgeNotice(job.job_id)
+			if (!notice) return
+			const names = notice.manual.map((file) => file.display_name || file.file_name)
+			const shown = names.slice(0, 8).join('、')
+			const more = names.length > 8 ? ` 等 ${names.length} 个` : ''
+			notificationManager?.addNotification?.({
+				type: 'warning',
+				title: notice.title,
+				text: `有 ${names.length} 个模组没能自动安装：${shown}${more}。可到 CurseForge 搜索这些名字手动下载。`,
+			})
+		},
+		appEvents,
+	)
 
 	// 整合包 zip / mrpack 拖入就安装（仅在主页与实例库）
 	try {
 		await getCurrentWebview().onDragDropEvent(async (event) => {
+			console.info('[drag] event', event.payload?.type, event.payload?.paths?.length ?? 0)
 			if (event.payload.type !== 'drop') return
 			const paths = event.payload.paths ?? []
 			if (paths.length !== 1) return

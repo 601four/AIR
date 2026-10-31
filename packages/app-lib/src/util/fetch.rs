@@ -340,7 +340,7 @@ fn reqwest_client_builder() -> reqwest::ClientBuilder {
 /// 累计下载字节数（用于自适应并发）
 pub static DOWNLOADED_BYTES: AtomicU64 = AtomicU64::new(0);
 /// 当前允许的并发上限
-pub static DOWNLOAD_CONCURRENCY: AtomicUsize = AtomicUsize::new(32);
+pub static DOWNLOAD_CONCURRENCY: AtomicUsize = AtomicUsize::new(48);
 
 /// 根据实测带宽自动调整下载并发数（5 秒一次）。
 /// 假设单连接能跑约 200KB/s：带宽越高开越多连接，带宽低就收回。
@@ -354,7 +354,8 @@ pub fn spawn_adaptive_concurrency() {
 			last = now;
 
 			let bps = delta as f64 / 5.0;
-			let target = ((bps / (200.0 * 1024.0)) as usize).clamp(8, 96);
+			// 国内线路常对单连接限速：总带宽低时不能减少连接数，反而要靠并发
+			let target = ((bps / (200.0 * 1024.0)) as usize).clamp(48, 128);
 			let current = DOWNLOAD_CONCURRENCY.load(Ordering::Relaxed);
 
 			let Ok(state) = crate::State::get().await else {
@@ -786,6 +787,123 @@ pub async fn fetch_file(
 }
 
 #[allow(clippy::too_many_arguments)]
+
+const PARALLEL_MIN_SIZE: u64 = u64::MAX;
+const PARALLEL_CONNECTIONS: u64 = 8;
+
+/// 多连接分段下载（单个文件并行 6 个 Range 请求）
+async fn try_parallel_ranged_download(
+    url: &str,
+    staging: Option<&Path>,
+) -> crate::Result<Option<DownloadedFile>> {
+    use futures::StreamExt;
+    use tokio::io::AsyncWriteExt;
+
+    let probe = match REQWEST_CLIENT
+        .get(url)
+        .header(reqwest::header::RANGE, "bytes=0-0")
+        .send()
+        .await
+    {
+        Ok(response) => response,
+        Err(_) => return Ok(None),
+    };
+    if probe.status() != reqwest::StatusCode::PARTIAL_CONTENT {
+        return Ok(None);
+    }
+    let total = probe
+        .headers()
+        .get(reqwest::header::CONTENT_RANGE)
+        .and_then(|value| value.to_str().ok())
+        .and_then(|value| value.rsplit('/').next())
+        .and_then(|value| value.trim().parse::<u64>().ok());
+    let Some(total) = total else {
+        return Ok(None);
+    };
+    if total < PARALLEL_MIN_SIZE {
+        return Ok(None);
+    }
+
+    let chunk = total.div_ceil(PARALLEL_CONNECTIONS);
+    let mut tasks = Vec::new();
+    for index in 0..PARALLEL_CONNECTIONS {
+        let start = index * chunk;
+        if start >= total {
+            break;
+        }
+        let end = (start + chunk).min(total) - 1;
+        let url = url.to_string();
+        let staging = staging.map(Path::to_path_buf);
+        tasks.push(tokio::spawn(async move {
+            let response = REQWEST_CLIENT
+                .get(&url)
+                .header(
+                    reqwest::header::RANGE,
+                    format!("bytes={start}-{end}"),
+                )
+                .send()
+                .await?;
+            if !response.status().is_success() {
+                anyhow::bail!("range request failed: {}", response.status());
+            }
+            let (mut file, path) =
+                crate::util::content_hash::temporary_file(staging.as_deref())
+                    .await?;
+            let mut stream = response.bytes_stream();
+            let mut written = 0u64;
+            while let Some(item) =
+                crate::install::control::download_step(stream.next()).await?
+            {
+                let bytes = item?;
+                file.write_all(&bytes).await?;
+                written += bytes.len() as u64;
+            }
+            file.flush().await?;
+            Ok::<_, anyhow::Error>((path, written))
+        }));
+    }
+
+    let mut parts: Vec<(tempfile::TempPath, u64)> = Vec::new();
+    for task in tasks {
+        match task.await {
+            Ok(Ok(part)) => parts.push(part),
+            _ => return Ok(None),
+        }
+    }
+
+    let (mut file, path) =
+        crate::util::content_hash::temporary_file(staging).await?;
+    let mut hasher = crate::util::content_hash::ContentHasher::default();
+    let mut size = 0u64;
+    for (part_path, _) in &parts {
+        let part_file: &Path = part_path.as_ref();
+        let mut reader = tokio::fs::File::open(part_file).await?;
+        let mut buffer = vec![0u8; 262144];
+        loop {
+            use tokio::io::AsyncReadExt;
+            let read = reader.read(&mut buffer).await?;
+            if read == 0 {
+                break;
+            }
+            file.write_all(&buffer[..read]).await?;
+            hasher.update(&buffer[..read]);
+            size += read as u64;
+        }
+        let _ = tokio::fs::remove_file(part_file).await;
+    }
+    file.flush().await?;
+    if size != total {
+        return Ok(None);
+    }
+    let hashes = hasher.finish(size);
+    Ok(Some(DownloadedFile {
+        path: DownloadedFilePath::Temporary(std::sync::Arc::new(path)),
+        size,
+        sha512: hashes.sha512,
+        reused: false,
+    }))
+}
+
 pub(crate) async fn fetch_file_mirrors_in(
     mirrors: &[&str],
     sha1: Option<&str>,
@@ -799,22 +917,6 @@ pub(crate) async fn fetch_file_mirrors_in(
     if mirrors.is_empty() {
         bail!(ErrorKind::InputError("no mirrors provided".to_string()));
     }
-
-    // 回退地址：同一个文件在官方 CDN 和 MCIM 之间自动补一份
-    let mut expanded: Vec<String> = mirrors.iter().map(|m| (*m).to_string()).collect();
-    for mirror in mirrors.iter() {
-        if let Some(rest) = mirror.strip_prefix("https://cdn.modrinth.com") {
-            expanded.push(format!("https://mod.mcimirror.top{rest}"));
-        } else if let Some(rest) = mirror.strip_prefix("https://mod.mcimirror.top") {
-            expanded.push(format!("https://cdn.modrinth.com{rest}"));
-        } else if let Some(rest) = mirror.strip_prefix("https://edge.forgecdn.net") {
-            expanded.push(format!("https://mod.mcimirror.top{rest}"));
-        } else if let Some(rest) = mirror.strip_prefix("https://mod.mcimirror.top") {
-            let _ = rest;
-        }
-    }
-    expanded.dedup();
-    let mirrors: Vec<&str> = expanded.iter().map(String::as_str).collect();
 
     for (index, mirror) in mirrors.iter().enumerate() {
         let body = fetch_advanced_with_target(
@@ -858,20 +960,9 @@ async fn read_file_response(
     let mut stream = response.bytes_stream();
     let mut hasher = ContentHasher::default();
     let mut size = 0_u64;
-    while let Some(chunk) = {
-        // 单次读取超过 30 秒没数据就当作连接卡住，交给下一个镜像重试
-        match tokio::time::timeout(
-            std::time::Duration::from_secs(30),
-            crate::install::control::download_step(stream.next()),
-        )
-        .await
-        {
-            Ok(result) => result?,
-            Err(_) => {
-                anyhow::bail!("download stalled for 30s")
-            }
-        }
-    } {
+    while let Some(chunk) =
+        crate::install::control::download_step(stream.next()).await?
+    {
         let chunk = chunk?;
         DOWNLOADED_BYTES.fetch_add(chunk.len() as u64, Ordering::Relaxed);
         file.write_all(&chunk).await?;

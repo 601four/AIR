@@ -381,6 +381,10 @@ impl ProcessManager {
         Ok(metadata)
     }
 
+    pub fn pid(&self, id: &Uuid) -> Option<u32> {
+        self.processes.get(id).and_then(|process| process.child.id())
+    }
+
     pub fn get(&self, id: Uuid) -> Option<ProcessMetadata> {
         self.processes.get(&id).map(|x| x.metadata.clone())
     }
@@ -426,6 +430,55 @@ impl ProcessManager {
         self.processes.remove(&id);
     }
 }
+
+
+#[cfg(windows)]
+mod window_watch {
+    use std::ffi::c_void;
+    use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
+
+    type Hwnd = *mut c_void;
+    static TARGET_PID: AtomicU32 = AtomicU32::new(0);
+    static FOUND_VISIBLE: AtomicBool = AtomicBool::new(false);
+
+    unsafe extern "system" {
+        fn EnumWindows(
+            callback: extern "system" fn(Hwnd, isize) -> i32,
+            lparam: isize,
+        ) -> i32;
+        fn GetWindowThreadProcessId(hwnd: Hwnd, pid: *mut u32) -> u32;
+        fn IsWindowVisible(hwnd: Hwnd) -> i32;
+    }
+
+    extern "system" fn enum_callback(hwnd: Hwnd, _lparam: isize) -> i32 {
+        unsafe {
+            if IsWindowVisible(hwnd) == 0 {
+                return 1;
+            }
+            let mut pid = 0u32;
+            GetWindowThreadProcessId(hwnd, &mut pid);
+            if pid == TARGET_PID.load(Ordering::Relaxed) {
+                FOUND_VISIBLE.store(true, Ordering::Relaxed);
+                return 0;
+            }
+            1
+        }
+    }
+
+    pub fn has_visible_window(pid: u32) -> bool {
+        TARGET_PID.store(pid, Ordering::Relaxed);
+        FOUND_VISIBLE.store(false, Ordering::Relaxed);
+        unsafe {
+            EnumWindows(enum_callback, 0);
+        }
+        FOUND_VISIBLE.load(Ordering::Relaxed)
+    }
+}
+
+/// 游戏窗口关闭后等待多久强制结束进程
+#[cfg(windows)]
+const WINDOW_CLOSED_GRACE: std::time::Duration =
+    std::time::Duration::from_secs(8);
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct ProcessMetadata {
@@ -936,6 +989,14 @@ impl Process {
         let mc_exit_status;
         let mut last_updated_playtime = Instant::now();
 
+        // 游戏窗口监视：有过窗口、后来窗口消失且进程还在 → 强制结束
+        #[cfg(windows)]
+        let mut seen_window = false;
+        #[cfg(windows)]
+        let mut window_hidden_since: Option<std::time::Instant> = None;
+        #[cfg(windows)]
+        let mut last_window_check = std::time::Instant::now();
+
         loop {
             if let Some(process) = state.process_manager.try_wait(uuid)? {
                 if let Some(t) = process {
@@ -945,6 +1006,30 @@ impl Process {
             } else {
                 mc_exit_status = ExitStatus::default();
                 break;
+            }
+
+            #[cfg(windows)]
+            {
+                if last_window_check.elapsed() >= std::time::Duration::from_secs(2) {
+                    last_window_check = std::time::Instant::now();
+                    if let Some(pid) = state.process_manager.pid(&uuid) {
+                        let visible = window_watch::has_visible_window(pid);
+                        if visible {
+                            seen_window = true;
+                            window_hidden_since = None;
+                        } else if seen_window {
+                            let since = window_hidden_since.get_or_insert_with(std::time::Instant::now);
+                            if since.elapsed() >= WINDOW_CLOSED_GRACE {
+                                tracing::warn!(
+                                    "游戏窗口已关闭但进程仍在，强制结束 Minecraft（pid {pid}）"
+                                );
+                                let _ = state.process_manager.kill(uuid).await;
+                                mc_exit_status = ExitStatus::default();
+                                break;
+                            }
+                        }
+                    }
+                }
             }
 
             // sleep for 10ms
