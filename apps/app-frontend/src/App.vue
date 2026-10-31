@@ -55,11 +55,11 @@ import { useQueries, useQuery, useQueryClient } from '@tanstack/vue-query'
 import { getVersion } from '@tauri-apps/api/app'
 import { convertFileSrc, invoke } from '@tauri-apps/api/core'
 import { listen } from '@tauri-apps/api/event'
+import { getCurrentWebview } from '@tauri-apps/api/webview'
 import { getCurrentWindow } from '@tauri-apps/api/window'
 import { fetch as tauriFetch } from '@tauri-apps/plugin-http'
 import { openUrl } from '@tauri-apps/plugin-opener'
 import { type } from '@tauri-apps/plugin-os'
-import { saveWindowState, StateFlags } from '@tauri-apps/plugin-window-state'
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import SandboxHost from '@/components/ui/SandboxHost.vue'
 import { RouterView, useRoute, useRouter } from 'vue-router'
@@ -81,7 +81,6 @@ import NavButton from '@/components/ui/NavButton.vue'
 import QuickInstanceSwitcher from '@/components/ui/QuickInstanceSwitcher.vue'
 import SharedInstanceInviteHandler from '@/components/ui/shared-instances/shared-instance-invite-handler/index.vue'
 import SplashScreen from '@/components/ui/SplashScreen.vue'
-import SurveyPopup from '@/components/ui/SurveyPopup.vue'
 import { useCheckDisableMouseover } from '@/composables/macCssFix.js'
 import { useAppEvent } from '@/composables/use-app-event'
 import { applyAccentColor, useAccentColor } from '@/composables/use-accent-color'
@@ -119,7 +118,17 @@ import { debugAnalytics, initAnalytics, trackEvent } from '@/helpers/analytics'
 import { check_reachable } from '@/helpers/auth.js'
 import { get_user, get_user_many, get_version } from '@/helpers/cache.js'
 import { gameSettingsQueryOptions } from '@/helpers/game-options'
-import { install_create_modpack_instance, install_get_modpack_preview } from '@/helpers/install'
+import {
+	install_create_modpack_instance,
+	install_get_modpack_preview,
+	installJobInstanceId,
+	isInstallJobFinished,
+} from '@/helpers/install'
+import { installCurseForgePack, waitForInstanceAvailable } from '@/helpers/curseforge-pack'
+import {
+	cleanupCurseForgeTempPack,
+	takeCurseForgeNotice,
+} from '@/helpers/curseforge-notices'
 import {
 	can_current_user_use_shared_instances,
 	get as getInstance,
@@ -647,41 +656,114 @@ function installConsoleLogCapture() {
 installConsoleLogCapture()
 
 onMounted(async () => {
-	// 先把数据库里的 AirCore 偏好回填到本地缓存
+	// 从 settings 表加载 AirCore 自定义字段，应用到运行时
 	try {
-		const { hydratePrefs } = await import('@/composables/use-prefs')
-		await hydratePrefs()
-	} catch {
-		// 忽略
-	}
+		const { get: getAirCoreSettings } = await import('@/helpers/settings.ts')
+		const stored = await getAirCoreSettings()
+		appSettings.accentColor = stored.accent_color || '#ff5050'
+		appSettings.autoMemory = stored.auto_memory === true
+		appSettings.prelaunchOptimize = stored.prelaunch_optimize === true
+		appSettings.downloadSource = stored.download_source || 'official'
+		appSettings.loaderMode = stored.loader_mode || 'cn'
+		appSettings.loaderPrefix = stored.loader_prefix ?? ''
+		appSettings.modrinthMirror = stored.modrinth_mirror === true
+		appSettings.sidebarNews = stored.sidebar_news !== false
+		appSettings.minimizeToTray = stored.minimize_to_tray !== false
 
-	// 启动时恢复 Minecraft 下载源设置
-	try {
-		const source = localStorage.getItem('aircore-download-source') ?? 'official'
-		void invoke('plugin:utils|set_download_source', { source })
-	} catch {
-		// 忽略
-	}
+		try {
+			window.localStorage.setItem('aircore-accent-color', appSettings.accentColor)
+		} catch {
+			// ignore
+		}
+		const { applyAccentColor } = await import('@/composables/use-accent-color')
+		applyAccentColor(appSettings.accentColor)
 
-	// 启动时恢复加载器下载源
-	try {
-		const loaderMode = localStorage.getItem('aircore-loader-mode') ?? 'cn'
-		const loaderPrefix = localStorage.getItem('aircore-loader-prefix') ?? ''
+		void invoke('plugin:utils|set_download_source', { source: appSettings.downloadSource })
 		void invoke('plugin:utils|set_loader_source', {
-			mode: loaderMode,
-			prefix: loaderPrefix || null,
+			mode: appSettings.loaderMode,
+			prefix: appSettings.loaderPrefix || null,
+		})
+		void invoke('plugin:utils|set_modrinth_mirror', {
+			enabled: appSettings.modrinthMirror,
+		})
+	} catch (error) {
+		console.warn('[settings] hydrate aircore settings failed', error)
+	}
+
+	// 按当前语言设置托盘菜单文字
+	void invoke('plugin:utils|tray_set_labels', {
+		show: formatMessage(messages.trayShow),
+		quit: formatMessage(messages.trayQuit),
+	}).catch(() => {})
+
+	// CurseForge 整合包：安装结束后才提示哪些模组没能自动安装
+	useAppEvent('install_job', (job) => {
+		if (!isInstallJobFinished(job.status)) return
+		void cleanupCurseForgeTempPack(job.job_id)
+		const notice = takeCurseForgeNotice(job.job_id)
+		if (!notice) return
+		const names = notice.manual.map((file) => file.display_name || file.file_name)
+		const shown = names.slice(0, 8).join('、')
+		const more = names.length > 8 ? ` 等 ${names.length} 个` : ''
+		notificationManager?.addNotification?.({
+			type: 'warning',
+			title: notice.title,
+			text: `有 ${names.length} 个模组没能自动安装：${shown}${more}。可到 CurseForge 搜索这些名字手动下载。`,
+		})
+	})
+
+	// 整合包 zip / mrpack 拖入就安装（仅在主页与实例库）
+	try {
+		await getCurrentWebview().onDragDropEvent(async (event) => {
+			if (event.payload.type !== 'drop') return
+			const paths = event.payload.paths ?? []
+			if (paths.length !== 1) return
+			if (!['/', '/library'].includes(route.path)) return
+			// 弹窗打开时交给弹窗自己处理，避免重复安装
+			if (document.querySelector('[role="dialog"], .modal-overlay, .creation-flow-modal')) return
+			const droppedPath = paths[0]
+			const lower = droppedPath.toLowerCase()
+			try {
+				let instanceId = null
+				if (lower.endsWith('.mrpack')) {
+					const job = await install_create_modpack_instance({
+						type: 'fromFile',
+						path: droppedPath,
+					})
+					instanceId = installJobInstanceId(job) ?? null
+				} else if (lower.endsWith('.zip')) {
+					const { job } = await installCurseForgePack(droppedPath)
+					instanceId = installJobInstanceId(job) ?? null
+				}
+				if (instanceId) {
+					notificationManager?.addNotification?.({
+						type: 'info',
+						title: '开始安装整合包',
+						text: '安装完成后会自动打开该实例',
+					})
+					void waitForInstanceAvailable(instanceId).then((ready) => {
+						if (ready) {
+							void router.push(`/instance/${encodeURIComponent(instanceId)}`)
+						} else {
+							notificationManager?.addNotification?.({
+								type: 'warning',
+								title: '整合包安装没有完成',
+								text: '请到下载管理器查看失败原因',
+							})
+						}
+					})
+				}
+			} catch (error) {
+				console.error('[drag-drop] pack install failed', error)
+				notificationManager?.addNotification?.({
+					type: 'error',
+					title: '安装整合包失败',
+					text: String(error),
+				})
+			}
 		})
 	} catch {
-		// 忽略
-	}
-
-	// 恢复强调色
-	try {
-		const { applyAccentColor } = await import('@/composables/use-accent-color')
-		const color = localStorage.getItem('aircore-accent-color')
-		if (color) applyAccentColor(color)
-	} catch {
-		// 忽略
+		// 浏览器环境下无法监听
 	}
 
 	// 插件宿主：暴露 Vue / UI 组件库，并加载已安装的插件
@@ -785,6 +867,8 @@ const formatBytes = useFormatBytes()
 
 const messages = defineMessages({
 	pluginLogs: { id: 'app.navigation.pluginLogs', defaultMessage: 'Plugin logs (developer)' },
+	trayShow: { id: 'app.tray.show', defaultMessage: 'Show AirCore' },
+	trayQuit: { id: 'app.tray.quit', defaultMessage: 'Quit' },
 	libraryLabel: { id: 'app.navigation.library', defaultMessage: 'Instances' },
 	pluginsNotification: { id: 'app.plugins.notificationTitle', defaultMessage: 'Plugins' },
 	warning: { id: 'app.notification.warning', defaultMessage: 'Warning' },
@@ -1089,7 +1173,7 @@ traceStartupStep('Initialize backend state', () => initialize_state(appEventChan
 	})
 
 const handleClose = async () => {
-	await saveWindowState(StateFlags.ALL)
+	await invoke('plugin:utils|save_window_state').catch(() => {})
 	await getCurrentWindow().close()
 }
 
@@ -2221,7 +2305,7 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
 			<NavButton
 				v-if="!isNavHidden('browse')"
 				v-tooltip.right="formatMessage(commonMessages.discoverContentLabel)"
-				to="/browse/modpack"
+				to="/browse/mod"
 				:is-primary="() => route.path.startsWith('/browse') && !route.query.i && !route.query.sid"
 				:is-subpage="
 					(route) => route.path.startsWith('/project') && !route.query.i && !route.query.sid
@@ -2386,8 +2470,7 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
 			class="app-viewport flex-grow router-view"
 			:style="{ marginRight: sidebarVisible ? '300px' : '0px' }"
 		>
-			<SurveyPopup />
-						<Teleport to="body">
+							<Teleport to="body">
 	<div
 					class="loading-indicator-container h-8 fixed z-50 pointer-events-none"
 					:style="{

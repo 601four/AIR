@@ -711,12 +711,12 @@ const selectableProjectTypes = computed(() => {
 	}
 
 	return [
+		{ label: formatMessage(messages.modsProjectType), href: `/browse/mod${suffix}`, shown: mods },
 		{
 			label: formatMessage(messages.modpacksProjectType),
 			href: `/browse/modpack${suffix}`,
 			shown: modpacks,
 		},
-		{ label: formatMessage(messages.modsProjectType), href: `/browse/mod${suffix}`, shown: mods },
 		{
 			label: formatMessage(messages.resourcePacksProjectType),
 			href: `/browse/resourcepack${suffix}`,

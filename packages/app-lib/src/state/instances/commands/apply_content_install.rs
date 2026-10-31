@@ -428,6 +428,7 @@ pub(crate) async fn download_project_version_with_progress(
         state,
         &[&file.url],
         file.hashes.get("sha512").map(String::as_str),
+        file.hashes.get("sha1").map(String::as_str),
         Some(u64::from(file.size)),
         Some(&download_meta),
         progress,

@@ -36,13 +36,14 @@
 <script setup lang="ts">
 import { defineMessages, useVIntl } from '@modrinth/ui'
 import { openUrl } from '@tauri-apps/plugin-opener'
-import { onMounted } from 'vue'
+import { computed, onMounted } from 'vue'
 
+import { useAppSettings } from '@/composables/use-app-settings'
 import { useMinecraftNews } from '@/composables/use-minecraft-news'
-import { useSidebarNews } from '@/composables/use-sidebar-news'
 
 const { formatMessage } = useVIntl()
-const { sidebarNewsEnabled } = useSidebarNews()
+const appSettings = useAppSettings()
+const sidebarNewsEnabled = computed(() => appSettings.sidebarNews)
 const { items, loadMinecraftNews } = useMinecraftNews()
 
 const messages = defineMessages({

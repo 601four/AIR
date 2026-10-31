@@ -66,11 +66,6 @@ onMounted(async () => {
 	// 闪屏阶段就把强调色应用上：本地没有时从数据库偏好里补
 	try {
 		let accent = window.localStorage.getItem('aircore-accent-color')
-		if (!accent) {
-			const prefs = await invoke('plugin:utils|prefs_get_all')
-			accent = prefs?.['aircore-accent-color'] ?? null
-			if (accent) window.localStorage.setItem('aircore-accent-color', accent)
-		}
 		accent = accent || DEFAULT_ACCENT
 		accentColor.value = accent
 		applyAccentColor(accent)

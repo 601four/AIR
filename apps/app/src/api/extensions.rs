@@ -46,6 +46,28 @@ pub fn extensions_dir<R: tauri::Runtime>(app: &tauri::AppHandle<R>) -> Option<Pa
 		.map(|dir| dir.join("extensions"))
 }
 
+/// 打开插件目录（尊重当前数据目录）
+#[tauri::command]
+pub async fn extensions_open_folder<R: tauri::Runtime>(
+    app: tauri::AppHandle<R>,
+) -> std::result::Result<String, String> {
+    use tauri::Manager;
+    use tauri_plugin_opener::OpenerExt;
+    let dir = extensions_dir(&app).ok_or_else(|| "找不到插件目录".to_string())?;
+    std::fs::create_dir_all(&dir).map_err(|error| error.to_string())?;
+    let path = dir.to_string_lossy().into_owned();
+    let opener_app = app.clone();
+    let target = path.clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        if let Err(error) = opener_app.opener().open_path(target, None::<&str>) {
+            tracing::error!("Failed to open extensions folder: {}", error);
+        }
+    })
+    .await
+    .map_err(|error| error.to_string())?;
+    Ok(path)
+}
+
 pub fn init<R: tauri::Runtime>() -> tauri::plugin::TauriPlugin<R> {
 	tauri::plugin::Builder::new("extensions")
 		.invoke_handler(tauri::generate_handler![

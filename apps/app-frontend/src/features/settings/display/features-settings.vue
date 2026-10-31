@@ -18,7 +18,6 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/vue-query'
 import { onBeforeUnmount, onMounted } from 'vue'
 
 import { useAppSettings } from '@/composables/use-app-settings.ts'
-import { useSidebarNews } from '@/composables/use-sidebar-news'
 import {
 	QUICK_INSTANCE_LIMIT_MAX,
 	useQuickInstanceLimit,
@@ -42,7 +41,6 @@ const settingsModal = injectAppSettingsModal()
 const quickInstances = useQuickInstanceLimit()
 const queryClient = useQueryClient()
 
-const { sidebarNewsEnabled, setSidebarNewsEnabled } = useSidebarNews()
 
 const messages = defineMessages({
 	instancePagesTitle: {
@@ -121,6 +119,7 @@ type FeaturesSettingsState = {
 	showSkinSelector: boolean
 	quickInstanceCount: number
 	showJumpIn: boolean
+	sidebarNews: boolean
 }
 
 const settingsQuery = useQuery(appSettingsQueryOptions())
@@ -139,6 +138,7 @@ function getFeaturesSettingsState(
 		showSkinSelector: settings.show_skin_selector_in_sidebar,
 		quickInstanceCount: quickInstances.limit.value ?? QUICK_INSTANCE_LIMIT_MAX,
 		showJumpIn: settings.show_jump_in,
+		sidebarNews: appSettings.sidebarNews,
 	}
 }
 
@@ -161,6 +161,7 @@ const settingsMutation = useMutation({
 			show_screenshots_tab_in_instances: value.showScreenshotsTab,
 			show_skin_selector_in_sidebar: value.showSkinSelector,
 			show_jump_in: value.showJumpIn,
+			sidebar_news: value.sidebarNews,
 		}
 
 		const screenshotsChanged =
@@ -181,10 +182,13 @@ const settingsMutation = useMutation({
 		appSettings.showScreenshotsTabInInstances = value.showScreenshotsTab
 		appSettings.showSkinSelectorInSidebar = value.showSkinSelector
 		appSettings.showJumpIn = value.showJumpIn
+		appSettings.sidebarNews = value.sidebarNews
 
 		if (updateQuickInstanceCount) {
 			quickInstances.setLimit(value.quickInstanceCount)
 		}
+
+		appSettings.sidebarNews = value.sidebarNews
 	},
 	onMutate: () =>
 		Promise.all([
@@ -297,9 +301,8 @@ onBeforeUnmount(() => {
 				</div>
 				<Toggle
 					id="show-minecraft-news-in-sidebar"
-					:model-value="sidebarNewsEnabled"
+					v-model="current.sidebarNews"
 					:aria-label="formatMessage(messages.sidebarNewsTitle)"
-					@update:model-value="(value) => setSidebarNewsEnabled(Boolean(value))"
 				/>
 			</div>
 

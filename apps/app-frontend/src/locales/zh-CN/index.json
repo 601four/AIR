@@ -4839,7 +4839,7 @@
     "message": "启动前优化内存"
   },
   "app.memory.prelaunchHint": {
-    "message": "（启动游戏前让系统回收启动器自身的冷页，不会动其他程序）"
+    "message": "启动游戏前回收系统各程序的空闲物理内存，为游戏腾出更多可用内存"
   },
   "app.downloads.sourceTitle": {
     "message": "Minecraft 下载源"
@@ -4933,5 +4933,38 @@
   },
   "app.downloads.loaderSourceCn": {
     "message": "国内加速（Maven Central 走阿里云）"
+  },
+  "app.dataDir.apply": {
+    "message": "应用这个路径"
+  },
+  "app.dataDir.invalidPath": {
+    "message": "请输入绝对路径，例如 D:\\\\AirCoreData"
+  },
+  "app.dataDir.editableHint": {
+    "message": "也可以直接编辑路径，回车或点别处生效。"
+  },
+  "app.downloads.modrinthSourceTitle": {
+    "message": "Modrinth 下载源"
+  },
+  "app.downloads.modrinthSourceDescription": {
+    "message": "选择 Modrinth 文件的下载来源。项目列表与搜索始终使用官方源。"
+  },
+  "app.downloads.modrinthSourceOfficial": {
+    "message": "官方"
+  },
+  "app.downloads.modrinthSourceMirror": {
+    "message": "MCIM 镜像"
+  },
+  "app.behavior-settings.minimize-to-tray.title": {
+    "message": "关闭时隐藏到托盘"
+  },
+  "app.behavior-settings.minimize-to-tray.description": {
+    "message": "点击关闭按钮时，将 AirCore 隐藏到系统托盘而不是退出。单击托盘图标可以恢复窗口。"
+  },
+  "app.tray.show": {
+    "message": "显示 AirCore"
+  },
+  "app.tray.quit": {
+    "message": "退出"
   }
 }

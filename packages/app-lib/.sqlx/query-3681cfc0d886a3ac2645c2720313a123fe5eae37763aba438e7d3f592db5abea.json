@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "\n            SELECT\n                max_concurrent_writes, max_concurrent_downloads,\n                theme, locale, default_page, collapsed_navigation, hide_nametag_skins_page, advanced_rendering, native_decorations,\n                discord_rpc, developer_mode, telemetry, personalized_ads,\n                json(extra_launch_args) extra_launch_args, json(custom_env_vars) custom_env_vars,\n                mc_memory_max, mc_force_fullscreen, mc_game_resolution_x, mc_game_resolution_y, hide_on_process_start,\n                hook_pre_launch, hook_wrapper, hook_post_exit,\n                custom_dir, prev_custom_dir, migrated, json(feature_flags) feature_flags, toggle_sidebar,\n                skipped_update, pending_update_toast_for_version, auto_download_updates,\n\t\t\t\tshow_files_tab_in_instances, show_worlds_tab_in_instances,\n\t\t\t\tshow_screenshots_tab_in_instances, show_skin_selector_in_sidebar,\n\t\t\t\trefocus_on_game_close, compact_instance_cards, show_play_time, warn_on_unknown_modpacks, skip_non_essential_warnings,\n\t\t\t\tshow_jump_in,\n\t\t\t\talways_show_copy_details,\n\t\t\t\thide_installed_modpacks,\n\t\t\t\tadvanced_filters_collapsed,\n\t\t\t\tdismissed_photosensitivity_filter_warning,\n\t\t\t\tfriends_active_collapsed,\n\t\t\t\tfriends_online_collapsed,\n\t\t\t\tfriends_offline_collapsed,\n\t\t\t\tfriends_pending_collapsed,\n                version\n            FROM settings\n            ",
+  "query": "\n            SELECT\n                max_concurrent_writes, max_concurrent_downloads,\n                theme, locale, default_page, collapsed_navigation, hide_nametag_skins_page, advanced_rendering, native_decorations,\n                discord_rpc, developer_mode, telemetry, personalized_ads,\n                json(extra_launch_args) extra_launch_args, json(custom_env_vars) custom_env_vars,\n                mc_memory_max, mc_force_fullscreen, mc_game_resolution_x, mc_game_resolution_y, hide_on_process_start,\n                hook_pre_launch, hook_wrapper, hook_post_exit,\n                custom_dir, prev_custom_dir, migrated, json(feature_flags) feature_flags, toggle_sidebar,\n                skipped_update, pending_update_toast_for_version, auto_download_updates,\n\t\t\t\tshow_files_tab_in_instances, show_worlds_tab_in_instances,\n\t\t\t\tshow_screenshots_tab_in_instances, show_skin_selector_in_sidebar,\n\t\t\t\trefocus_on_game_close, compact_instance_cards, show_play_time, warn_on_unknown_modpacks, skip_non_essential_warnings,\n\t\t\t\tshow_jump_in,\n\t\t\t\talways_show_copy_details,\n\t\t\t\thide_installed_modpacks,\n\t\t\t\tadvanced_filters_collapsed,\n\t\t\t\tdismissed_photosensitivity_filter_warning,\n\t\t\t\tfriends_active_collapsed,\n\t\t\t\tfriends_online_collapsed,\n\t\t\t\tfriends_offline_collapsed,\n\t\t\t\tfriends_pending_collapsed,\n                accent_color,\n                auto_memory,\n                prelaunch_optimize,\n                download_source,\n                loader_mode,\n                loader_prefix,\n                modrinth_mirror,\n                sidebar_news,\n                minimize_to_tray,\n                version\n            FROM settings\n            ",
   "describe": {
     "columns": [
       {
@@ -528,8 +528,107 @@
         }
       },
       {
-        "name": "version",
+        "name": "accent_color",
         "ordinal": 49,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "settings",
+            "name": "accent_color"
+          }
+        }
+      },
+      {
+        "name": "auto_memory",
+        "ordinal": 50,
+        "type_info": "Bool",
+        "origin": {
+          "Table": {
+            "table": "settings",
+            "name": "auto_memory"
+          }
+        }
+      },
+      {
+        "name": "prelaunch_optimize",
+        "ordinal": 51,
+        "type_info": "Bool",
+        "origin": {
+          "Table": {
+            "table": "settings",
+            "name": "prelaunch_optimize"
+          }
+        }
+      },
+      {
+        "name": "download_source",
+        "ordinal": 52,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "settings",
+            "name": "download_source"
+          }
+        }
+      },
+      {
+        "name": "loader_mode",
+        "ordinal": 53,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "settings",
+            "name": "loader_mode"
+          }
+        }
+      },
+      {
+        "name": "loader_prefix",
+        "ordinal": 54,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "settings",
+            "name": "loader_prefix"
+          }
+        }
+      },
+      {
+        "name": "modrinth_mirror",
+        "ordinal": 55,
+        "type_info": "Bool",
+        "origin": {
+          "Table": {
+            "table": "settings",
+            "name": "modrinth_mirror"
+          }
+        }
+      },
+      {
+        "name": "sidebar_news",
+        "ordinal": 56,
+        "type_info": "Bool",
+        "origin": {
+          "Table": {
+            "table": "settings",
+            "name": "sidebar_news"
+          }
+        }
+      },
+      {
+        "name": "minimize_to_tray",
+        "ordinal": 57,
+        "type_info": "Bool",
+        "origin": {
+          "Table": {
+            "table": "settings",
+            "name": "minimize_to_tray"
+          }
+        }
+      },
+      {
+        "name": "version",
+        "ordinal": 58,
         "type_info": "Integer",
         "origin": {
           "Table": {
@@ -592,8 +691,17 @@
       false,
       false,
       false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      true,
+      false,
+      false,
+      false,
       false
     ]
   },
-  "hash": "f916381e98556e9eaadd1b4995ce814a826f6595467ecb906f7fb4312b8e705e"
+  "hash": "3681cfc0d886a3ac2645c2720313a123fe5eae37763aba438e7d3f592db5abea"
 }

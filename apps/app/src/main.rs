@@ -22,6 +22,9 @@ mod updater_impl;
 #[cfg(not(feature = "updater"))]
 mod updater_impl_noop;
 
+mod tray;
+mod window_state;
+
 // Should be called in launcher initialization
 #[tracing::instrument(skip_all)]
 #[tauri::command]
@@ -117,10 +120,23 @@ async fn set_restart_after_pending_update(
 /// 启动时写一行日志，用来确认日志目录与写权限正常
 fn aircore_boot_log() {
     use std::io::Write;
-    let base = std::env::var("APPDATA")
+    // 优先使用用户设置的数据目录（data-location.json）
+    let default_dir = std::env::var("APPDATA")
         .map(std::path::PathBuf::from)
+        .map(|base| base.join("com.aircore.launcher"))
         .unwrap_or_else(|_| std::path::PathBuf::from("."));
-    let dir = base.join("com.aircore.launcher").join("logs");
+    let mut base = default_dir.clone();
+    if let Ok(text) = std::fs::read_to_string(default_dir.join("data-location.json")) {
+        if let Ok(value) = serde_json::from_str::<serde_json::Value>(&text) {
+            if let Some(path) = value.get("path").and_then(|v| v.as_str()) {
+                let candidate = std::path::PathBuf::from(path);
+                if !path.trim().is_empty() {
+                    base = candidate;
+                }
+            }
+        }
+    }
+    let dir = base.join("logs");
     let _ = std::fs::create_dir_all(&dir);
     let path = dir.join("webview.log");
     if let Ok(mut file) = std::fs::OpenOptions::new().create(true).append(true).open(&path) {
@@ -298,23 +314,20 @@ fn main() {
         );
     }
 
-    let window_state_flags = tauri_plugin_window_state::StateFlags::POSITION
-        | tauri_plugin_window_state::StateFlags::SIZE
-        | tauri_plugin_window_state::StateFlags::MAXIMIZED;
-    #[cfg(target_os = "windows")]
-    let window_state_flags =
-        window_state_flags | tauri_plugin_window_state::StateFlags::DECORATIONS;
-
     builder = builder
-        .plugin(
-            tauri_plugin_window_state::Builder::default()
-                .with_filename("app-window-state.json")
-                .with_denylist(&["signin"])
-                // Restoring VISIBLE would override the hidden startup window.
-                .with_state_flags(window_state_flags)
-                .build(),
-        )
+        .on_window_event(|window, event| {
+            if window.label() != "main" {
+                return;
+            }
+            if matches!(event, tauri::WindowEvent::CloseRequested { .. }) {
+                crate::window_state::save(window.app_handle());
+            }
+        })
         .setup(|app| {
+            theseus::set_app_version(app.package_info().version.to_string());
+            crate::api::curseforge_pack::cleanup_stale_temp_packs();
+            crate::tray::setup_tray(app)?;
+            crate::window_state::restore(app.handle());
             #[cfg(target_os = "macos")]
             {
                 let payload = macos::deep_link::get_or_init_payload(app);

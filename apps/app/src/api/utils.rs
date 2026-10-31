@@ -55,12 +55,19 @@ pub fn init<R: Runtime>() -> tauri::plugin::TauriPlugin<R> {
             optimize_launcher_memory,
             set_download_source,
             set_loader_source,
+            set_modrinth_mirror,
+            get_modrinth_mirror,
+            save_window_state,
+            cf_pack_to_mrpack,
+            cf_pack_info,
+            cf_cleanup_temp_pack,
+            hide_window_to_tray,
+            tray_set_labels,
+            show_main_window,
             get_loader_source,
-            prefs_get_all,
             debug_log_append,
             get_data_dir,
             set_data_dir,
-            prefs_set,
             translate_text,
 ])
         .build()
@@ -305,21 +312,7 @@ pub fn optimize_launcher_memory() -> serde_json::Value {
     let result = crate::api::memory_optimize::optimize_system_memory();
     serde_json::to_value(result).unwrap_or_else(|_| serde_json::json!({}))
 }
-/// 读取 AirCore 自定义偏好（强调色 / 内存开关 / 下载源）
-#[tauri::command]
-pub async fn prefs_get_all() -> std::result::Result<std::collections::HashMap<String, String>, String> {
-    theseus::prefs::prefs_get_all()
-        .await
-        .map_err(|e| e.to_string())
-}
 
-/// 写入一个 AirCore 偏好
-#[tauri::command]
-pub async fn prefs_set(key: String, value: String) -> std::result::Result<(), String> {
-    theseus::prefs::prefs_set(key, value)
-        .await
-        .map_err(|e| e.to_string())
-}
 
 /// 把前端控制台信息追加到文件，便于排查白屏 / 报错
 #[tauri::command]
@@ -400,6 +393,75 @@ pub fn get_loader_source() -> serde_json::Value {
         "mode": mode,
         "prefix": theseus::util::mirror::current_loader_prefix(),
     })
+}
+
+/// 保存窗口位置 / 大小（前端关闭前调用）
+#[tauri::command]
+pub fn save_window_state<R: tauri::Runtime>(app: tauri::AppHandle<R>) -> bool {
+    crate::window_state::save(&app);
+    true
+}
+
+/// 设置 Modrinth 是否走 MCIM 镜像
+#[tauri::command]
+pub fn set_modrinth_mirror(enabled: bool) -> bool {
+    theseus::util::mirror::set_modrinth_mirror(enabled);
+    true
+}
+
+/// 查询 Modrinth 镜像开关
+#[tauri::command]
+pub fn get_modrinth_mirror() -> bool {
+    theseus::util::mirror::modrinth_mirror_enabled()
+}
+
+/// CurseForge 整合包：读取 manifest 信息
+#[tauri::command]
+pub fn cf_pack_info(
+    zip_path: String,
+) -> std::result::Result<crate::api::curseforge_pack::CfPackInfo, String> {
+    crate::api::curseforge_pack::cf_pack_info_inner(zip_path)
+}
+
+/// CurseForge 整合包：转成临时 .mrpack
+#[tauri::command]
+pub async fn cf_pack_to_mrpack(
+    zip_path: String,
+    include_optional: bool,
+) -> std::result::Result<crate::api::curseforge_pack::CfPrepareResult, String> {
+    crate::api::curseforge_pack::cf_pack_to_mrpack_inner(zip_path, include_optional).await
+}
+
+/// CurseForge 整合包：删除临时 .mrpack
+#[tauri::command]
+pub fn cf_cleanup_temp_pack(path: String) -> bool {
+    crate::api::curseforge_pack::cf_cleanup_temp_pack_inner(path)
+}
+
+/// 最小化到托盘
+#[tauri::command]
+pub fn hide_window_to_tray<R: tauri::Runtime>(
+    app: tauri::AppHandle<R>,
+) -> bool {
+    crate::tray::hide_to_tray(&app);
+    true
+}
+
+/// 设置托盘菜单文字（由前端按当前语言传入）
+#[tauri::command]
+pub fn tray_set_labels<R: tauri::Runtime>(
+    app: tauri::AppHandle<R>,
+    show: String,
+    quit: String,
+) -> bool {
+    crate::tray::update_labels(&app, &show, &quit).is_ok()
+}
+
+/// 显示主窗口（从托盘恢复）
+#[tauri::command]
+pub fn show_main_window<R: tauri::Runtime>(app: tauri::AppHandle<R>) -> bool {
+    crate::tray::show_from_tray(&app);
+    true
 }
 
 /// 切换 Minecraft 下载源："official" | "bmclapi"

@@ -1,6 +1,7 @@
 const trimTrailingSlash = (url: string) => url.replace(/\/$/, '')
 
 const siteUrl = trimTrailingSlash(import.meta.env.MODRINTH_URL || 'https://modrinth.com')
+// Modrinth API 始终走官方（国内访问列表很快；镜像只用于文件 CDN）
 const labrinthBaseUrl = trimTrailingSlash(
 	import.meta.env.MODRINTH_API_BASE_URL || 'https://api.modrinth.com',
 )

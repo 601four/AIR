@@ -87,6 +87,16 @@ export type AppSettings = {
 	pending_update_toast_for_version: string | null
 	auto_download_updates: boolean | null
 
+	accent_color: string
+	auto_memory: boolean
+	prelaunch_optimize: boolean
+	download_source: string
+	loader_mode: string
+	loader_prefix: string | null
+	modrinth_mirror: boolean
+	sidebar_news: boolean
+	minimize_to_tray: boolean
+
 	version: number
 }
 

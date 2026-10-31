@@ -109,7 +109,7 @@ mod win {
 		let mut ok = unsafe { Process32FirstW(snapshot, &mut entry) };
 		while ok != 0 {
 			let pid = entry.th32_process_id;
-			// \u8df3\u8fc7 Idle / System\uff0c\u4ee5\u53ca\u81ea\u5df1\uff08\u81ea\u5df1\u7684\u5de5\u4f5c\u96c6\u7559\u7ed9\u7a97\u53e3\u6e32\u67d3\uff09
+			// 跳过 Idle / System，以及自己（自己的工作集留给窗口渲染）
 			if pid > 4 && pid != own_pid {
 				let handle = unsafe {
 					OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_SET_QUOTA, 0, pid)

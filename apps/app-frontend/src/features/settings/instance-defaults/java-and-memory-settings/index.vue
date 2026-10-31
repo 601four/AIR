@@ -71,8 +71,7 @@ const messages = defineMessages({
 	},
 	prelaunchHint: {
 		id: 'app.memory.prelaunchHint',
-		defaultMessage:
-			'(Asks the system to reclaim the launcher cold pages before launching; other programs are not touched)',
+		defaultMessage: 'Reclaims idle physical memory from running programs before launch to free up more memory for the game',
 	},
 	javaInstallationsTitle: {
 		id: 'app.settings.tabs.java-installations',

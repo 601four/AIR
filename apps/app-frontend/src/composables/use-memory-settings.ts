@@ -1,6 +1,6 @@
 import { invoke } from '@tauri-apps/api/core'
 
-import { setPref } from './use-prefs'
+import { updateAirCoreSettings } from './use-app-settings'
 import { computed, ref } from 'vue'
 
 // 启动器的内存策略设置（存在本地，不走账号同步）
@@ -32,12 +32,12 @@ export function recommendMemoryMb(totalMb: number): number {
 export function useMemorySettings() {
 	const setAutoMemory = (value: boolean) => {
 		autoMemory.value = value
-		setPref(AUTO_KEY, value ? '1' : '0')
+		void updateAirCoreSettings({ auto_memory: value })
 	}
 
 	const setPrelaunchOptimize = (value: boolean) => {
 		prelaunchOptimize.value = value
-		setPref(OPT_KEY, value ? '1' : '0')
+		void updateAirCoreSettings({ prelaunch_optimize: value })
 	}
 
 	return {

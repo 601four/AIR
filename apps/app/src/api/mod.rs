@@ -2,6 +2,7 @@ use serde::ser::SerializeStruct;
 use serde::{Serialize, Serializer};
 use theseus::error_code;
 
+pub mod curseforge_pack;
 pub mod memory_optimize;
 pub mod auth;
 pub mod import;

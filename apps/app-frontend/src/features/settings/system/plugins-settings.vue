@@ -74,7 +74,6 @@ import {
 	useVIntl,
 } from '@modrinth/ui'
 import { invoke } from '@tauri-apps/api/core'
-import { appDataDir } from '@tauri-apps/api/path'
 import { computed, onMounted, onUnmounted, reactive } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
@@ -194,8 +193,7 @@ function settingsNodes(pluginId: string): unknown[] {
 
 async function openFolder() {
 	try {
-		const dataDir = await appDataDir()
-		await invoke('plugin:utils|open_path', { path: `${dataDir}/extensions` })
+		await invoke('plugin:extensions|extensions_open_folder')
 	} catch (error) {
 		addNotification({ type: 'error', title: formatMessage(messages.openFolderFailed), text: String(error) })
 	}

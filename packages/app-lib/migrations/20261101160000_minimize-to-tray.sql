@@ -1,0 +1,1 @@
+ALTER TABLE settings ADD COLUMN minimize_to_tray BOOLEAN NOT NULL DEFAULT 1;

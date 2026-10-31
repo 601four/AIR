@@ -81,7 +81,47 @@ pub struct Settings {
     pub pending_update_toast_for_version: Option<String>,
     pub auto_download_updates: Option<bool>,
 
+    /// AirCore 强调色
+    #[serde(default = "default_accent_color")]
+    pub accent_color: String,
+    /// 自动分配内存
+    #[serde(default)]
+    pub auto_memory: bool,
+    /// 启动前优化内存
+    #[serde(default)]
+    pub prelaunch_optimize: bool,
+    /// Minecraft 下载源：official | bmclapi
+    #[serde(default = "default_download_source")]
+    pub download_source: String,
+    /// 加载器下载源：official | cn | custom
+    #[serde(default = "default_loader_mode")]
+    pub loader_mode: String,
+    /// 加载器自定义镜像前缀
+    #[serde(default)]
+    pub loader_prefix: Option<String>,
+    /// Modrinth 是否走 MCIM 镜像
+    #[serde(default)]
+    pub modrinth_mirror: bool,
+    /// 侧边栏显示 Minecraft 新闻
+    #[serde(default = "default_true")]
+    pub sidebar_news: bool,
+    /// 最小化到托盘
+    #[serde(default = "default_true")]
+    pub minimize_to_tray: bool,
+
     pub version: usize,
+}
+
+fn default_accent_color() -> String {
+    "#ff5050".to_string()
+}
+
+fn default_download_source() -> String {
+    "official".to_string()
+}
+
+fn default_loader_mode() -> String {
+    "cn".to_string()
 }
 
 fn default_true() -> bool {
@@ -132,6 +172,15 @@ impl Settings {
 				friends_online_collapsed,
 				friends_offline_collapsed,
 				friends_pending_collapsed,
+                accent_color,
+                auto_memory,
+                prelaunch_optimize,
+                download_source,
+                loader_mode,
+                loader_prefix,
+                modrinth_mirror,
+                sidebar_news,
+                minimize_to_tray,
                 version
             FROM settings
             "
@@ -213,6 +262,16 @@ impl Settings {
                 == 1,
             show_skin_selector_in_sidebar: res.show_skin_selector_in_sidebar
                 == 1,
+            accent_color: res.accent_color,
+            auto_memory: res.auto_memory,
+            prelaunch_optimize: res.prelaunch_optimize,
+            download_source: res.download_source,
+            loader_mode: res.loader_mode,
+            loader_prefix: res.loader_prefix,
+            modrinth_mirror: res.modrinth_mirror,
+            sidebar_news: res.sidebar_news,
+            minimize_to_tray: res.minimize_to_tray,
+
             version: res.version as usize,
         })
     }
@@ -292,7 +351,16 @@ impl Settings {
 				friends_active_collapsed = $47,
 				friends_online_collapsed = $48,
 				friends_offline_collapsed = $49,
-				friends_pending_collapsed = $50
+				friends_pending_collapsed = $50,
+				accent_color = $51,
+				auto_memory = $52,
+				prelaunch_optimize = $53,
+				download_source = $54,
+				loader_mode = $55,
+				loader_prefix = $56,
+				modrinth_mirror = $57,
+				sidebar_news = $58,
+				minimize_to_tray = $59
             ",
             max_concurrent_writes,
             max_concurrent_downloads,
@@ -344,6 +412,15 @@ impl Settings {
             self.friends_online_collapsed,
             self.friends_offline_collapsed,
             self.friends_pending_collapsed,
+            self.accent_color,
+            self.auto_memory,
+            self.prelaunch_optimize,
+            self.download_source,
+            self.loader_mode,
+            self.loader_prefix,
+            self.modrinth_mirror,
+            self.sidebar_news,
+            self.minimize_to_tray,
         )
         .execute(exec)
         .await?;

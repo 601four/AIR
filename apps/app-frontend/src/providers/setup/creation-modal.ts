@@ -12,6 +12,7 @@ import type ModpackAlreadyInstalledModal from '@/components/ui/modal/ModpackAlre
 import { useAppSettings } from '@/composables/use-app-settings.ts'
 import { trackEvent } from '@/helpers/analytics'
 import { get_project, get_search_results } from '@/helpers/cache.js'
+import { installCurseForgePack, waitForInstanceAvailable } from '@/helpers/curseforge-pack'
 import { import_instance } from '@/helpers/import.js'
 import {
 	type CreatePackLocation,
@@ -133,6 +134,22 @@ export function setupCreationModal(
 			}
 
 			if (config.modpackFilePath.value) {
+				const modpackPath = config.modpackFilePath.value
+
+				// CurseForge 整合包（.zip）：转 .mrpack 后交给上游安装任务
+				if (/\.zip$/i.test(modpackPath)) {
+					const { job } = await installCurseForgePack(modpackPath)
+					const instanceId = installJobInstanceId(job)
+					if (instanceId) {
+						const ready = await waitForInstanceAvailable(instanceId)
+						if (ready) {
+							await router.push(`/instance/${encodeURIComponent(instanceId)}`)
+						}
+					}
+					trackEvent('InstanceCreate', { source: 'CurseForgePack' })
+					return
+				}
+
 				const location: CreatePackLocation = {
 					type: 'fromFile',
 					path: config.modpackFilePath.value,

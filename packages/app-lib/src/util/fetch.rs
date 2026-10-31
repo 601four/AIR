@@ -754,19 +754,18 @@ pub async fn fetch_file(
 		.await;
 
 		match body {
-			Ok(FetchBody::File(file)) => return Ok(file),
+			Ok(FetchBody::File(file)) => {
+				if attempt == 0 && mirrored_url != original_url {
+					crate::util::mirror::record_success(category);
+				}
+				return Ok(file);
+			}
 			Ok(FetchBody::Memory(_)) => unreachable!("requested a file download"),
 			Err(err) => {
 				if attempt == 0 && mirrored_url != original_url {
 					// 镜像缺文件，下一轮用官方地址，并提醒用户
 					// 只提示一次，避免数百个文件同时回退时刷屏
 					crate::util::mirror::record_failure(category);
-					let count = FALLBACK_COUNT.fetch_add(1, std::sync::atomic::Ordering::Relaxed) + 1;
-					// 镜像长期失败：自动切回官方源，避免每个文件都先撞一次 404
-					if count == 30 {
-						crate::util::mirror::set_source(crate::util::mirror::DownloadSource::Official);
-						tracing::warn!("镜像连续失败 30 次，本次运行已自动切回官方源");
-					}
 					if !FALLBACK_WARNED.swap(true, std::sync::atomic::Ordering::Relaxed) {
 						let message = "国内镜像缺少部分文件，已自动回退到官方源下载（后续同类不再提示）".to_string();
 						if let Ok(handle) = tokio::runtime::Handle::try_current() {
@@ -869,6 +868,7 @@ pub(crate) async fn fetch_content_file(
     state: &crate::State,
     mirrors: &[&str],
     sha512: Option<&str>,
+    sha1: Option<&str>,
     size: Option<u64>,
     download_meta: Option<&DownloadMeta>,
     progress: Option<&mut FetchProgressFn<'_>>,
@@ -878,6 +878,7 @@ pub(crate) async fn fetch_content_file(
         .get_or_download_file(
             mirrors,
             sha512,
+            sha1,
             size,
             download_meta,
             &state.fetch_semaphore,
@@ -1675,5 +1676,4 @@ mod tests {
     }
 }
 
-static FALLBACK_COUNT: std::sync::atomic::AtomicU32 = std::sync::atomic::AtomicU32::new(0);
 static FALLBACK_WARNED: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);

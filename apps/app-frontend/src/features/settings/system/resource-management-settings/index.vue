@@ -14,7 +14,6 @@ import { open } from '@tauri-apps/plugin-dialog'
 import { invoke } from '@tauri-apps/api/core'
 import { computed, ref, watch } from 'vue'
 
-import { setPref } from '@/composables/use-prefs'
 
 import { get, set } from '@/helpers/settings.ts'
 
@@ -25,12 +24,11 @@ const { addNotification } = injectNotificationManager()
 const settings = ref(await get())
 
 // Minecraft 下载源
-const DOWNLOAD_SOURCE_KEY = 'aircore-download-source'
 const downloadSourceOptions = [
 	{ value: 'official' },
 	{ value: 'bmclapi' },
 ]
-const downloadSource = ref(localStorage.getItem(DOWNLOAD_SOURCE_KEY) ?? 'official')
+const downloadSource = ref(settings.value.download_source ?? 'official')
 const downloadSourceLabels = computed(() => ({
 	official: formatMessage(messages.downloadSourceOfficial),
 	bmclapi: formatMessage(messages.downloadSourceMirror),
@@ -42,15 +40,26 @@ const downloadSourceChoices = computed(() =>
 	})),
 )
 watch(downloadSource, async (value) => {
-	setPref(DOWNLOAD_SOURCE_KEY, value)
+	settings.value.download_source = value
+	await set(settings.value).catch(() => {})
 	await invoke('plugin:utils|set_download_source', { source: value }).catch(() => {})
 })
 
+// Modrinth 资源源
+const modrinthMirror = ref(settings.value.modrinth_mirror === true)
+const modrinthSourceChoices = computed(() => [
+	{ value: false, label: formatMessage(messages.modrinthSourceOfficial) },
+	{ value: true, label: formatMessage(messages.modrinthSourceMirror) },
+])
+watch(modrinthMirror, async (value) => {
+	settings.value.modrinth_mirror = value
+	await set(settings.value).catch(() => {})
+	await invoke('plugin:utils|set_modrinth_mirror', { enabled: value }).catch(() => {})
+})
+
 // 加载器下载源（Fabric / Quilt / Forge / NeoForge）
-const LOADER_MODE_KEY = 'aircore-loader-mode'
-const LOADER_PREFIX_KEY = 'aircore-loader-prefix'
-const loaderMode = ref(localStorage.getItem(LOADER_MODE_KEY) ?? 'cn')
-const loaderMirror = ref(localStorage.getItem(LOADER_PREFIX_KEY) ?? '')
+const loaderMode = ref(settings.value.loader_mode ?? 'cn')
+const loaderMirror = ref(settings.value.loader_prefix ?? '')
 const loaderModeChoices = computed(() => [
 	{ value: 'official', label: formatMessage(messages.loaderSourceOfficial) },
 	{ value: 'cn', label: formatMessage(messages.loaderSourceCn) },
@@ -58,8 +67,9 @@ const loaderModeChoices = computed(() => [
 ])
 watch([loaderMode, loaderMirror], async () => {
 	const prefix = loaderMode.value === 'custom' ? loaderMirror.value.trim() : ''
-	setPref(LOADER_MODE_KEY, loaderMode.value)
-	setPref(LOADER_PREFIX_KEY, prefix)
+	settings.value.loader_mode = loaderMode.value
+	settings.value.loader_prefix = prefix || null
+	await set(settings.value).catch(() => {})
 	await invoke('plugin:utils|set_loader_source', {
 		mode: loaderMode.value,
 		prefix: prefix || null,
@@ -85,6 +95,22 @@ const messages = defineMessages({
 		id: 'app.downloads.concurrentHint',
 		defaultMessage:
 			'Auto-tuned between 8 and 96 based on bandwidth; this is the initial value.',
+	},
+	modrinthSourceTitle: {
+		id: 'app.downloads.modrinthSourceTitle',
+		defaultMessage: 'Modrinth download source',
+	},
+	modrinthSourceDescription: {
+		id: 'app.downloads.modrinthSourceDescription',
+		defaultMessage: 'Where Modrinth files are downloaded from. Project lists and search always use the official source.',
+	},
+	modrinthSourceOfficial: {
+		id: 'app.downloads.modrinthSourceOfficial',
+		defaultMessage: 'Official',
+	},
+	modrinthSourceMirror: {
+		id: 'app.downloads.modrinthSourceMirror',
+		defaultMessage: 'MCIM mirror',
 	},
 	loaderSourceTitle: {
 		id: 'app.downloads.loaderSourceTitle',
@@ -116,12 +142,6 @@ const messages = defineMessages({
 		defaultMessage: 'Failed to change the data directory',
 	},
 	dataDirBrowse: { id: 'app.dataDir.browse', defaultMessage: 'Choose folder' },
-	dataDirReset: { id: 'app.dataDir.reset', defaultMessage: 'Reset to default' },
-	dataDirRestart: { id: 'app.dataDir.restart', defaultMessage: 'Restart now' },
-	dataDirPending: {
-		id: 'app.dataDir.pending',
-		defaultMessage: 'New location saved. Restart the launcher to apply it.',
-	},
 	appDirectoryTitle: {
 		id: 'app.settings.resource-management.app-directory.title',
 		defaultMessage: 'App directory',
@@ -176,8 +196,7 @@ watch(
 // 账号数据目录（app.db / 插件 / 日志）
 const dataDirInfo = ref({ default: '', configured: null, effective: '' })
 const dataDirDisplay = ref('')
-const dataDirPending = ref(false)
-const restarting = ref(false)
+let dataDirSaveTimer
 
 async function loadDataDir() {
 	try {
@@ -188,6 +207,27 @@ async function loadDataDir() {
 	}
 }
 
+// 输入后自动保存（和「应用目录」一样，改完重启生效）
+watch(dataDirDisplay, (value) => {
+	if (dataDirSaveTimer) clearTimeout(dataDirSaveTimer)
+	const trimmed = String(value ?? '').trim()
+	if (!trimmed || trimmed === dataDirInfo.value.effective) return
+	if (!/^[A-Za-z]:[\\/]|^\\\\/.test(trimmed)) return
+	dataDirSaveTimer = setTimeout(async () => {
+		try {
+			await invoke('plugin:utils|set_data_dir', { path: trimmed })
+			dataDirInfo.value = { ...dataDirInfo.value, configured: trimmed, effective: trimmed }
+		} catch (error) {
+			console.error('[data-dir] set failed', error)
+			addNotification({
+				type: 'error',
+				title: formatMessage(messages.dataDirSetFailed),
+				text: String(error),
+			})
+		}
+	}, 600)
+})
+
 async function chooseDataDir() {
 	const picked = await open({
 		multiple: false,
@@ -195,43 +235,7 @@ async function chooseDataDir() {
 		title: formatMessage(messages.dataDirBrowse),
 	})
 	if (!picked) return
-	try {
-		await invoke('plugin:utils|set_data_dir', { path: picked })
-		dataDirPending.value = true
-		dataDirDisplay.value = picked
-		await loadDataDir()
-	} catch (error) {
-		console.error('[data-dir] set failed', error)
-		addNotification({
-			type: 'error',
-			title: formatMessage(messages.dataDirSetFailed),
-			text: String(error),
-		})
-	}
-}
-
-async function resetDataDir() {
-	try {
-		await invoke('plugin:utils|set_data_dir', { path: null })
-		dataDirPending.value = true
-		await loadDataDir()
-	} catch (error) {
-		console.error('[data-dir] reset failed', error)
-		addNotification({
-			type: 'error',
-			title: formatMessage(messages.dataDirSetFailed),
-			text: String(error),
-		})
-	}
-}
-
-async function restartLauncher() {
-	restarting.value = true
-	try {
-		await invoke('restart_app')
-	} finally {
-		restarting.value = false
-	}
+	dataDirDisplay.value = picked
 }
 
 loadDataDir()
@@ -259,6 +263,14 @@ async function findLauncherDir() {
 				:options="downloadSourceChoices"
 				trigger-type="base"
 			/>
+		</div>
+	</section>
+
+	<section class="mb-6 border-0 border-b border-solid border-divider pb-6">
+		<h2 class="m-0 text-lg font-semibold text-contrast">{{ formatMessage(messages.modrinthSourceTitle) }}</h2>
+		<p class="m-0 mt-1 text-secondary">{{ formatMessage(messages.modrinthSourceDescription) }}</p>
+		<div class="mt-3 w-[16rem]">
+			<Combobox v-model="modrinthMirror" :options="modrinthSourceChoices" trigger-type="base" />
 		</div>
 	</section>
 
@@ -313,13 +325,7 @@ async function findLauncherDir() {
 			<h2 class="m-0 text-lg font-semibold text-contrast">
 				{{ formatMessage(messages.dataDirTitle) }}
 			</h2>
-			<Input
-				id="dataDir"
-				v-model="dataDirDisplay"
-				:icon="BoxIcon"
-				type="text"
-				wrapper-class="w-full"
-			>
+			<Input id="dataDir" v-model="dataDirDisplay" :icon="BoxIcon" type="text" wrapper-class="w-full">
 				<template #right>
 					<IconButton
 						v-tooltip="formatMessage(messages.dataDirBrowse)"
@@ -334,23 +340,6 @@ async function findLauncherDir() {
 			<p class="m-0 leading-tight text-secondary">
 				{{ formatMessage(messages.dataDirDescription) }}
 			</p>
-			<div class="mt-1 flex flex-wrap items-center gap-2">
-				<Button v-if="dataDirInfo.configured" type="outlined" @click="resetDataDir">
-					{{ formatMessage(messages.dataDirReset) }}
-				</Button>
-				<Button
-					v-if="dataDirPending"
-					type="colored"
-					color="brand"
-					:disabled="restarting"
-					@click="restartLauncher"
-				>
-					{{ formatMessage(messages.dataDirRestart) }}
-				</Button>
-				<p v-if="dataDirPending" class="m-0 leading-tight text-sm text-brand">
-					{{ formatMessage(messages.dataDirPending) }}
-				</p>
-			</div>
 		</div>
 
 		<div class="flex flex-col gap-2.5">

@@ -61,7 +61,7 @@
       {
         "name": "installed!: i64",
         "ordinal": 5,
-        "type_info": "Integer",
+        "type_info": "Null",
         "origin": "Expression"
       }
     ],

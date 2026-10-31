@@ -18,16 +18,24 @@ impl ContentStore {
         &self,
         mirrors: &[&str],
         sha512: Option<&str>,
+        sha1: Option<&str>,
         size: Option<u64>,
         download_meta: Option<&DownloadMeta>,
         semaphore: &FetchSemaphore,
         progress: Option<&mut FetchProgressFn<'_>>,
     ) -> crate::Result<GetFileResult> {
-        let sha512 = sha512.ok_or_else(|| {
-            ErrorKind::ContentStoreError(
-                "content download is missing a SHA-512 hash".into(),
-            )
-        })?;
+        let Some(sha512) = sha512 else {
+            return self
+                .get_or_download_file_with_sha1(
+                    mirrors,
+                    sha1,
+                    size,
+                    download_meta,
+                    semaphore,
+                    progress,
+                )
+                .await;
+        };
         validate_digest(sha512, 128)?;
         let _acquisition = self.download_lock(sha512).lock().await;
         if let Some(stored_file) = self.lookup(Some(sha512), size).await? {
@@ -75,6 +83,83 @@ impl ContentStore {
         let stored_file = self
             .save_staged_file(download.into_staged()?, &sources)
             .await?;
+        Ok(GetFileResult {
+            stored_file,
+            reused: false,
+        })
+    }
+
+    /// 无 SHA-512 时的回退：先下载，再用 SHA-1 校验（CurseForge 只提供 SHA-1）
+    async fn get_or_download_file_with_sha1(
+        &self,
+        mirrors: &[&str],
+        sha1: Option<&str>,
+        size: Option<u64>,
+        download_meta: Option<&DownloadMeta>,
+        semaphore: &FetchSemaphore,
+        progress: Option<&mut FetchProgressFn<'_>>,
+    ) -> crate::Result<GetFileResult> {
+        let sha1 = sha1.ok_or_else(|| {
+            ErrorKind::ContentStoreError(
+                "content download is missing a SHA-1 or SHA-512 hash".into(),
+            )
+        })?;
+        validate_digest(sha1, 40)?;
+        let download = downloads::download(
+            &self.staging,
+            &self.pool,
+            mirrors,
+            download_meta,
+            semaphore,
+            progress,
+        )
+        .await?;
+        let staged = download.into_staged()?;
+        let staged_path: std::path::PathBuf = staged.path.to_path_buf();
+        let actual_sha1 = tokio::task::spawn_blocking(move || -> std::io::Result<String> {
+            use std::io::Read;
+            let mut file = std::fs::File::open(&staged_path)?;
+            let mut hasher = sha1_smol::Sha1::new();
+            let mut buffer = vec![0u8; 262144];
+            loop {
+                let read = file.read(&mut buffer)?;
+                if read == 0 {
+                    break;
+                }
+                hasher.update(&buffer[..read]);
+            }
+            Ok(hasher.digest().to_string())
+        })
+        .await
+        .map_err(|error| {
+            ErrorKind::ContentStoreError(format!("failed to hash download: {error}"))
+        })??;
+        if !actual_sha1.eq_ignore_ascii_case(sha1) {
+            bail!(ErrorKind::ContentStoreError(format!(
+                "downloaded content SHA-1 mismatch: expected {sha1}, got {actual_sha1}",
+            )));
+        }
+        if let Some(expected_size) = size
+            && expected_size != staged.size
+        {
+            tracing::warn!(
+                expected_size,
+                actual_size = staged.size,
+                "Downloaded content matches SHA-1 but differs from the declared size; using its actual size"
+            );
+        }
+        let sources = mirrors
+            .iter()
+            .filter_map(|source| {
+                let url = url::Url::parse(source).ok()?;
+                (url.scheme() == "https"
+                    && url.username().is_empty()
+                    && url.password().is_none()
+                    && url.query().is_none())
+                .then(|| source.to_string())
+            })
+            .collect::<Vec<_>>();
+        let stored_file = self.save_staged_file(staged, &sources).await?;
         Ok(GetFileResult {
             stored_file,
             reused: false,

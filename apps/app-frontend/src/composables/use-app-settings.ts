@@ -45,10 +45,27 @@ const appSettings = reactive({
 	showSkinSelectorInSidebar: true,
 	nativeDecorations: false,
 	devMode: false,
+	accentColor: '#ff5050',
+	autoMemory: false,
+	prelaunchOptimize: false,
+	downloadSource: 'official',
+	loaderMode: 'cn',
+	loaderPrefix: '',
+	modrinthMirror: false,
+	sidebarNews: true,
+	minimizeToTray: true,
 	featureFlags,
 	getFeatureFlag,
 })
 
 export function useAppSettings() {
 	return appSettings
+}
+
+
+/** 保存 AirCore 自定义字段到 settings 表（当前仅用于强调色 / 内存开关的立即生效场景） */
+export async function updateAirCoreSettings(patch: Record<string, unknown>): Promise<void> {
+	const { get, set } = await import('@/helpers/settings.ts')
+	const latest = await get()
+	await set({ ...latest, ...patch } as never)
 }

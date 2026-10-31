@@ -38,6 +38,14 @@ const messages = defineMessages({
 		id: 'app.behavior-settings.confirmations.title',
 		defaultMessage: 'Confirmations',
 	},
+	minimizeToTrayTitle: {
+		id: 'app.behavior-settings.minimize-to-tray.title',
+		defaultMessage: 'Hide to system tray on close',
+	},
+	minimizeToTrayDescription: {
+		id: 'app.behavior-settings.minimize-to-tray.description',
+		defaultMessage: 'The close button hides AirCore into the system tray instead of quitting. Click the tray icon to bring it back.',
+	},
 	minimizeLauncherTitle: {
 		id: 'app.appearance-settings.minimize-launcher.title',
 		defaultMessage: 'Minimize app',
@@ -115,6 +123,7 @@ const messages = defineMessages({
 })
 
 type BehaviorSettingsState = {
+	minimizeToTray: boolean
 	minimizeApp: boolean
 	refocusOnGameClose: boolean
 	hideRightSidebar: boolean
@@ -130,6 +139,7 @@ await settingsQuery.suspense()
 
 function getBehaviorSettingsState(settings: AppSettings): BehaviorSettingsState {
 	return {
+		minimizeToTray: settings.minimize_to_tray,
 		minimizeApp: settings.hide_on_process_start,
 		refocusOnGameClose: settings.refocus_on_game_close,
 		compactInstanceCards: settings.compact_instance_cards,
@@ -157,6 +167,7 @@ const settingsMutation = useMutation({
 			show_play_time: value.showPlayTime,
 			warn_on_unknown_modpacks: value.warnOnUnknownModpacks,
 			skip_non_essential_warnings: value.skipNonEssentialWarnings,
+			minimize_to_tray: value.minimizeToTray,
 		}
 
 		await set(nextSettings)
@@ -168,6 +179,7 @@ const settingsMutation = useMutation({
 		appSettings.skipNonEssentialWarnings = value.skipNonEssentialWarnings
 		appSettings.toggleSidebar = value.hideRightSidebar
 		appSettings.hideNametagSkinsPage = value.hideNametag
+		appSettings.minimizeToTray = value.minimizeToTray
 	},
 	onMutate: () => queryClient.cancelQueries({ queryKey: appSettingsKeys.all }),
 	onError: handleError,
@@ -208,6 +220,18 @@ onBeforeUnmount(() => {
 			{{ formatMessage(messages.startupAndNavigationTitle) }} <!-- 显示：启动与导航 -->
 		</h2>
 		<div class="mt-4 flex flex-col gap-6">
+			<div class="flex items-center justify-between gap-4">
+				<div>
+					<h3 class="m-0 text-lg font-semibold text-contrast">
+						{{ formatMessage(messages.minimizeToTrayTitle) }}
+					</h3>
+					<p class="m-0 mt-1">
+						{{ formatMessage(messages.minimizeToTrayDescription) }}
+					</p>
+				</div>
+				<Toggle id="minimize-to-tray" v-model="current.minimizeToTray" />
+			</div>
+
 			<div class="flex items-center justify-between gap-4">
 				<div>
 					<h3 class="m-0 text-lg font-semibold text-contrast">

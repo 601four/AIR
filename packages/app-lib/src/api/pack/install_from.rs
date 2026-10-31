@@ -428,6 +428,12 @@ pub(crate) async fn generate_pack_from_version_id_with_reporter(
             .files
             .iter()
             .find(|file| file.url == url)
+            .and_then(|file| file.hashes.get("sha1"))
+            .map(String::as_str),
+        version
+            .files
+            .iter()
+            .find(|file| file.url == url)
             .map(|file| u64::from(file.size)),
         Some(&download_meta),
         progress,

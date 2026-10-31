@@ -10,7 +10,7 @@
 				type="quiet"
 				label="Minimize window"
 				class="relative before:absolute before:-inset-y-[9px] before:-inset-x-[6px] before:content-['']"
-				@click="getCurrentWindow().minimize()"
+				@click="handleMinimize"
 			>
 				<MinimizeIcon />
 			</IconButton>
@@ -38,8 +38,8 @@
 <script setup>
 import { MaximizeIcon, MinimizeIcon, RestoreIcon, XIcon } from '@modrinth/assets'
 import { IconButton } from '@modrinth/ui'
+import { invoke } from '@tauri-apps/api/core'
 import { getCurrentWindow } from '@tauri-apps/api/window'
-import { saveWindowState, StateFlags } from '@tauri-apps/plugin-window-state'
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 
 import { useAppSettings } from '@/composables/use-app-settings.ts'
@@ -47,6 +47,10 @@ import { get as getSettings } from '@/helpers/settings.ts'
 import { getOS } from '@/helpers/utils.js'
 
 const appSettings = useAppSettings()
+
+async function handleMinimize() {
+	await getCurrentWindow().minimize()
+}
 
 const nativeDecorations = ref(true)
 const isMaximized = ref(false)
@@ -108,7 +112,11 @@ onUnmounted(() => {
 })
 
 const handleClose = async () => {
-	await saveWindowState(StateFlags.ALL)
+	await invoke('plugin:utils|save_window_state').catch(() => {})
+	if (appSettings.minimizeToTray) {
+		await invoke('plugin:utils|hide_window_to_tray').catch(() => {})
+		return
+	}
 	await getCurrentWindow().close()
 }
 </script>

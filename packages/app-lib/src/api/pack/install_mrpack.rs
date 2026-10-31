@@ -885,6 +885,10 @@ async fn install_zipped_mrpack_files_with_reporter_inner(
                         .hashes
                         .get(&PackFileHash::Sha512)
                         .map(String::as_str),
+                    project
+                        .hashes
+                        .get(&PackFileHash::Sha1)
+                        .map(String::as_str),
                     Some(project_size),
                     Some(&content_context.download_meta),
                     Some(progress),

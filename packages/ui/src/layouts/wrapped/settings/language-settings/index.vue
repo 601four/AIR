@@ -4,10 +4,6 @@
 			{{ formatMessage(commonSettingsMessages.language) }}
 		</h2>
 
-		<Admonition type="warning" class="mb-4 mt-2">
-			{{ formatMessage(languageSelectorMessages.languageWarning, { platform }) }}
-		</Admonition>
-
 		<p class="m-0 mb-4 text-secondary">
 			<IntlFormatted
 				:message-id="languageSelectorMessages.languagesDescription"

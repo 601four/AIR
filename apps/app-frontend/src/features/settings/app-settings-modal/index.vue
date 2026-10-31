@@ -121,7 +121,6 @@ const tabs = [
 		category: tabCategories.display,
 		icon: LanguagesIcon,
 		content: LanguageSettings,
-		badge: commonMessages.beta,
 	},
 	{
 		name: commonSettingsMessages.featureFlags,

@@ -4839,7 +4839,7 @@
     "message": "Optimize memory before launch"
   },
   "app.memory.prelaunchHint": {
-    "message": "(Asks the system to reclaim the launcher's cold pages before launching; other programs are not touched)"
+    "message": "Reclaims idle physical memory from running programs before launch to free up more memory for the game"
   },
   "app.downloads.sourceTitle": {
     "message": "Minecraft download source"
@@ -4933,5 +4933,38 @@
   },
   "app.downloads.loaderSourceCn": {
     "message": "China acceleration (Maven Central via Aliyun)"
+  },
+  "app.dataDir.apply": {
+    "message": "Apply this path"
+  },
+  "app.dataDir.invalidPath": {
+    "message": "Please enter an absolute path like D:\\\\AirCoreData"
+  },
+  "app.dataDir.editableHint": {
+    "message": "You can also edit the path directly and press Enter or click elsewhere."
+  },
+  "app.downloads.modrinthSourceTitle": {
+    "message": "Modrinth download source"
+  },
+  "app.downloads.modrinthSourceDescription": {
+    "message": "Where Modrinth files are downloaded from. Project lists and search always use the official source."
+  },
+  "app.downloads.modrinthSourceOfficial": {
+    "message": "Official"
+  },
+  "app.downloads.modrinthSourceMirror": {
+    "message": "MCIM mirror"
+  },
+  "app.behavior-settings.minimize-to-tray.title": {
+    "message": "Hide to system tray on close"
+  },
+  "app.behavior-settings.minimize-to-tray.description": {
+    "message": "The close button hides AirCore into the system tray instead of quitting. Click the tray icon to bring it back."
+  },
+  "app.tray.show": {
+    "message": "Show AirCore"
+  },
+  "app.tray.quit": {
+    "message": "Quit"
   }
 }

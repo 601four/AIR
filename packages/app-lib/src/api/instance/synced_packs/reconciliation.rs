@@ -304,6 +304,7 @@ async fn prepare_pack(
             state,
             &[file.url.as_str()],
             file.hashes.get("sha512").map(String::as_str),
+            file.hashes.get("sha1").map(String::as_str),
             Some(u64::from(file.size)),
             None,
             None,

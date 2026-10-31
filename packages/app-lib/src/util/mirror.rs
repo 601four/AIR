@@ -86,9 +86,33 @@ pub fn current_loader_prefix() -> Option<String> {
 }
 
 const ALIYUN_MAVEN: &str = "https://maven.aliyun.com/repository/public";
+const MCIM: &str = "https://mod.mcimirror.top";
+
+/// Modrinth 是否走 MCIM 镜像（默认官方）
+static MODRINTH_MIRROR: AtomicU8 = AtomicU8::new(0);
+
+pub fn set_modrinth_mirror(enabled: bool) {
+	MODRINTH_MIRROR.store(if enabled { 1 } else { 0 }, Ordering::Relaxed);
+}
+
+pub fn modrinth_mirror_enabled() -> bool {
+	MODRINTH_MIRROR.load(Ordering::Relaxed) == 1
+}
 
 /// 把 Mojang 官方地址重写为镜像地址（仅开启镜像时）
 pub fn rewrite_url(url: &str) -> String {
+	// CurseForge：默认走 MCIM 镜像（不需要 key）
+	if let Some(rest) = url.strip_prefix("https://api.curseforge.com") {
+		return format!("{MCIM}/curseforge{rest}");
+	}
+
+	// Modrinth：API（搜索/项目信息）始终走官方；文件 CDN 可选镜像
+	if modrinth_mirror_enabled()
+		&& let Some(rest) = url.strip_prefix("https://cdn.modrinth.com")
+	{
+		return format!("{MCIM}{rest}");
+	}
+
 	if current_source() == DownloadSource::Official {
 		return url.to_string();
 	}
@@ -138,13 +162,23 @@ pub fn rewrite_url(url: &str) -> String {
 	url.to_string()
 }
 
-/// 回退计数：按资源类别记录镜像失败次数
-static FAILURES: std::sync::OnceLock<std::sync::Mutex<std::collections::HashMap<&'static str, u32>>> =
-	std::sync::OnceLock::new();
+/// 回退计数：按资源类别记录镜像失败次数与最后失败时间
+struct CategoryFailure {
+	count: u32,
+	last: std::time::Instant,
+}
 
-fn failures() -> &'static std::sync::Mutex<std::collections::HashMap<&'static str, u32>> {
+static FAILURES: std::sync::OnceLock<
+	std::sync::Mutex<std::collections::HashMap<&'static str, CategoryFailure>>,
+> = std::sync::OnceLock::new();
+
+fn failures(
+) -> &'static std::sync::Mutex<std::collections::HashMap<&'static str, CategoryFailure>> {
 	FAILURES.get_or_init(|| std::sync::Mutex::new(std::collections::HashMap::new()))
 }
+
+/// 镜像短暂不可用的冷却时长
+const MIRROR_COOLDOWN: std::time::Duration = std::time::Duration::from_secs(60);
 
 /// 把 URL 归类，便于判断哪一类资源的镜像不可用
 pub fn category(url: &str) -> &'static str {
@@ -157,21 +191,39 @@ pub fn category(url: &str) -> &'static str {
 	}
 }
 
-/// 记录一次回退；同一类资源连续失败多次后本次运行不再尝试镜像
+/// 记录一次回退；同一类资源连续失败多次后，冷却一段时间
 pub fn record_failure(category: &'static str) {
 	let mut guard = match failures().lock() {
 		Ok(guard) => guard,
 		Err(_) => return,
 	};
-	let count = guard.entry(category).or_insert(0);
-	*count += 1;
+	let entry = guard.entry(category).or_insert(CategoryFailure {
+		count: 0,
+		last: std::time::Instant::now(),
+	});
+	entry.count += 1;
+	entry.last = std::time::Instant::now();
 }
 
-/// 该类资源的镜像是否已判定不可用
+/// 镜像成功一次，重置该类资源的失败计数
+pub fn record_success(category: &'static str) {
+	let mut guard = match failures().lock() {
+		Ok(guard) => guard,
+		Err(_) => return,
+	};
+	guard.remove(category);
+}
+
+/// 该类资源的镜像是否正处于冷却期
 pub fn is_broken(category: &'static str) -> bool {
 	let guard = match failures().lock() {
 		Ok(guard) => guard,
 		Err(_) => return false,
 	};
-	guard.get(category).copied().unwrap_or(0) >= 5
+	match guard.get(category) {
+		Some(entry) => {
+			entry.count >= 5 && entry.last.elapsed() < MIRROR_COOLDOWN
+		}
+		None => false,
+	}
 }

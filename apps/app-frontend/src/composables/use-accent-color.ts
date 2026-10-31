@@ -1,6 +1,6 @@
 import { computed, ref } from 'vue'
 
-import { setPref } from './use-prefs'
+import { updateAirCoreSettings } from './use-app-settings'
 
 // 主题强调色：直接改写 CSS 变量，不动底层主题文件
 export interface AccentOption {
@@ -113,7 +113,12 @@ export function useAccentColor() {
 	const setAccent = (color: string) => {
 		accentColor.value = color
 		applyAccentColor(color)
-		setPref(STORAGE_KEY, color)
+		try {
+			window.localStorage.setItem(STORAGE_KEY, color)
+		} catch {
+			// ignore
+		}
+		void updateAirCoreSettings({ accent_color: color })
 	}
 
 	const reset = () => setAccent(DEFAULT_ACCENT)
