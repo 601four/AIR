@@ -6,6 +6,7 @@
 //! 依赖 MCIM 公益镜像（无需 CurseForge API key）。
 
 use std::io::{Cursor, Read, Write};
+use std::path::{Component, Path};
 
 use serde::{Deserialize, Serialize};
 use zip::{ZipArchive, ZipWriter, write::SimpleFileOptions};
@@ -67,6 +68,8 @@ pub struct CfManualFile {
 #[derive(Debug, Serialize)]
 pub struct CfPackInfo {
 	pub title: String,
+	/// zip 里自带的 mod jar 数量（>0 表示这是完整包）
+	pub bundled_mods: usize,
 	pub version: Option<String>,
 	pub game_version: String,
 	pub loader: String,
@@ -159,7 +162,9 @@ pub fn cf_pack_info_inner(zip_path: String) -> Result<CfPackInfo, String> {
 	let (loader, loader_version) = primary_loader(&manifest)
 		.map(|loader| parse_loader(&loader.id))
 		.unwrap_or_else(|| ("vanilla".to_string(), String::new()));
+	let bundled_mods = count_bundled_jars(&zip_path).unwrap_or(0);
 	Ok(CfPackInfo {
+		bundled_mods,
 		title: manifest
 			.name
 			.clone()
@@ -407,4 +412,100 @@ pub fn cleanup_stale_temp_packs() {
 			let _ = std::fs::remove_file(&path);
 		}
 	}
+}
+
+
+/// 统计 zip 里自带的 mod jar（mods/ 或 overrides/mods/ 等）
+fn count_bundled_jars(zip_path: &str) -> Result<usize, String> {
+	let bytes = std::fs::read(zip_path).map_err(|error| error.to_string())?;
+	let mut archive =
+		ZipArchive::new(Cursor::new(bytes)).map_err(|error| error.to_string())?;
+	let mut count = 0usize;
+	for index in 0..archive.len() {
+		let Ok(entry) = archive.by_index(index) else {
+			continue;
+		};
+		let Ok(name) = entry.name() else {
+			continue;
+		};
+		let lower = name.to_ascii_lowercase();
+		if !lower.ends_with(".jar") {
+			continue;
+		}
+		let is_mod_path = lower.starts_with("mods/")
+			|| lower.contains("/mods/")
+			|| lower.starts_with("overrides/mods/")
+			|| lower.starts_with("client-overrides/mods/");
+		if is_mod_path {
+			count += 1;
+		}
+	}
+	Ok(count)
+}
+
+/// 完整包（已带 mod）：直接把 zip 内容复制到实例目录，不下载任何模组
+pub async fn cf_import_full_pack_inner(
+	instance_id: String,
+	zip_path: String,
+) -> Result<usize, String> {
+	let bytes = std::fs::read(&zip_path).map_err(|error| format!("无法读取整合包: {error}"))?;
+	let mut archive =
+		ZipArchive::new(Cursor::new(bytes)).map_err(|error| format!("不是有效的 zip: {error}"))?;
+
+	let state = theseus::State::get()
+		.await
+		.map_err(|error| format!("读取启动器状态失败: {error}"))?;
+	let metadata = theseus::instance::get(&instance_id)
+		.await
+		.map_err(|error| format!("读取实例失败: {error}"))?
+		.ok_or_else(|| "unknown instance".to_string())?;
+	let instance_root = state.directories.instances_dir().join(&metadata.instance.path);
+
+	let mut written = 0usize;
+	for index in 0..archive.len() {
+		let mut entry = match archive.by_index(index) {
+			Ok(entry) => entry,
+			Err(_) => continue,
+		};
+		let name = match entry.name() {
+			Ok(name) => name.to_string(),
+			Err(_) => continue,
+		};
+		if name.ends_with('/') {
+			continue;
+		}
+		// 跳过整合包元数据
+		let lower = name.to_ascii_lowercase();
+		if lower == "manifest.json" || lower == "modlist.html" {
+			continue;
+		}
+		// 去掉 overrides/ client-overrides/ 前缀
+		let relative = name
+			.strip_prefix("overrides/")
+			.or_else(|| name.strip_prefix("client-overrides/"))
+			.or_else(|| name.strip_prefix("server-overrides/"))
+			.unwrap_or(&name);
+		if relative.is_empty() {
+			continue;
+		}
+		let relative_path = Path::new(relative);
+		if relative_path
+			.components()
+			.any(|component| !matches!(component, Component::Normal(_)))
+		{
+			continue;
+		}
+		let mut buffer = Vec::new();
+		if entry.read_to_end(&mut buffer).is_err() {
+			continue;
+		}
+		let target = instance_root.join(relative_path);
+		if let Some(parent) = target.parent() {
+			let _ = std::fs::create_dir_all(parent);
+		}
+		if std::fs::write(&target, &buffer).is_ok() {
+			written += 1;
+		}
+	}
+	Ok(written)
 }

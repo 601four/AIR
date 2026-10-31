@@ -799,6 +799,23 @@ pub(crate) async fn fetch_file_mirrors_in(
     if mirrors.is_empty() {
         bail!(ErrorKind::InputError("no mirrors provided".to_string()));
     }
+
+    // 回退地址：同一个文件在官方 CDN 和 MCIM 之间自动补一份
+    let mut expanded: Vec<String> = mirrors.iter().map(|m| (*m).to_string()).collect();
+    for mirror in mirrors.iter() {
+        if let Some(rest) = mirror.strip_prefix("https://cdn.modrinth.com") {
+            expanded.push(format!("https://mod.mcimirror.top{rest}"));
+        } else if let Some(rest) = mirror.strip_prefix("https://mod.mcimirror.top") {
+            expanded.push(format!("https://cdn.modrinth.com{rest}"));
+        } else if let Some(rest) = mirror.strip_prefix("https://edge.forgecdn.net") {
+            expanded.push(format!("https://mod.mcimirror.top{rest}"));
+        } else if let Some(rest) = mirror.strip_prefix("https://mod.mcimirror.top") {
+            let _ = rest;
+        }
+    }
+    expanded.dedup();
+    let mirrors: Vec<&str> = expanded.iter().map(String::as_str).collect();
+
     for (index, mirror) in mirrors.iter().enumerate() {
         let body = fetch_advanced_with_target(
             Method::GET,
@@ -841,9 +858,20 @@ async fn read_file_response(
     let mut stream = response.bytes_stream();
     let mut hasher = ContentHasher::default();
     let mut size = 0_u64;
-    while let Some(chunk) =
-        crate::install::control::download_step(stream.next()).await?
-    {
+    while let Some(chunk) = {
+        // 单次读取超过 30 秒没数据就当作连接卡住，交给下一个镜像重试
+        match tokio::time::timeout(
+            std::time::Duration::from_secs(30),
+            crate::install::control::download_step(stream.next()),
+        )
+        .await
+        {
+            Ok(result) => result?,
+            Err(_) => {
+                anyhow::bail!("download stalled for 30s")
+            }
+        }
+    } {
         let chunk = chunk?;
         DOWNLOADED_BYTES.fetch_add(chunk.len() as u64, Ordering::Relaxed);
         file.write_all(&chunk).await?;

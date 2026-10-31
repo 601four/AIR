@@ -402,6 +402,7 @@ fn main() {
                     "cf_pack_to_mrpack",
                     "cf_pack_info",
                     "cf_cleanup_temp_pack",
+                    "cf_import_full_pack",
                     "hide_window_to_tray",
                     "tray_set_labels",
                     "show_main_window",

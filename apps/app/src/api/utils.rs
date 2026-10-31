@@ -61,6 +61,7 @@ pub fn init<R: Runtime>() -> tauri::plugin::TauriPlugin<R> {
             cf_pack_to_mrpack,
             cf_pack_info,
             cf_cleanup_temp_pack,
+            cf_import_full_pack,
             hide_window_to_tray,
             tray_set_labels,
             show_main_window,
@@ -430,6 +431,15 @@ pub async fn cf_pack_to_mrpack(
     include_optional: bool,
 ) -> std::result::Result<crate::api::curseforge_pack::CfPrepareResult, String> {
     crate::api::curseforge_pack::cf_pack_to_mrpack_inner(zip_path, include_optional).await
+}
+
+/// CurseForge 完整包（已带 mod）：直接解压到实例
+#[tauri::command]
+pub async fn cf_import_full_pack(
+    instance_id: String,
+    zip_path: String,
+) -> std::result::Result<usize, String> {
+    crate::api::curseforge_pack::cf_import_full_pack_inner(instance_id, zip_path).await
 }
 
 /// CurseForge 整合包：删除临时 .mrpack

@@ -718,9 +718,19 @@ onMounted(async () => {
 			if (event.payload.type !== 'drop') return
 			const paths = event.payload.paths ?? []
 			if (paths.length !== 1) return
-			if (!['/', '/library'].includes(route.path)) return
-			// 弹窗打开时交给弹窗自己处理，避免重复安装
-			if (document.querySelector('[role="dialog"], .modal-overlay, .creation-flow-modal')) return
+			// 落在弹窗里时交给弹窗自己处理；其他任何页面都允许拖入安装
+			try {
+				const scale = window.devicePixelRatio || 1
+				const position = event.payload.position
+				if (position) {
+					const element = document.elementFromPoint(position.x / scale, position.y / scale)
+					if (element?.closest('[role="dialog"], .modal-overlay, .creation-flow-modal')) {
+						return
+					}
+				}
+			} catch {
+				// ignore
+			}
 			const droppedPath = paths[0]
 			const lower = droppedPath.toLowerCase()
 			try {
