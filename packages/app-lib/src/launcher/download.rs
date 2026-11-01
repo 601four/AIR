@@ -787,7 +787,9 @@ async fn curl_prefetch_files(
     tracing::info!("curl 预下载：{} 个文件", missing.len());
 
     let curl = if cfg!(windows) { "curl.exe" } else { "curl" };
-    for chunk in missing.chunks(32) {
+    // 实测：一批里只要有一个文件卡住，整批都要等它（曾出现 28 个文件耗时 50s）
+    // 所以：小批 + 短超时，下完后对失败文件再补一轮
+    for chunk in missing.chunks(16) {
         let canceling = crate::install::control::CURRENT_INSTALL
             .try_with(|control| control.is_canceling())
             .unwrap_or(false);
@@ -802,7 +804,7 @@ async fn curl_prefetch_files(
             .arg("-L")
             .arg("--fail")
             .arg("--max-time")
-            .arg("60");
+            .arg("15");
         for (url, path, _) in chunk {
             cmd.arg("-o").arg(path).arg(url);
         }
@@ -821,6 +823,56 @@ async fn curl_prefetch_files(
                 return Ok(());
             }
         }
+        for (_, path, sha1) in chunk {
+            let ok = tokio::task::spawn_blocking({
+                let sha1 = sha1.clone();
+                let path = path.clone();
+                move || -> bool {
+                    let Ok(bytes) = std::fs::read(&path) else {
+                        return false;
+                    };
+                    let mut hasher = sha1_smol::Sha1::new();
+                    hasher.update(&bytes);
+                    hasher.digest().to_string() == sha1
+                }
+            })
+            .await
+            .unwrap_or(false);
+            if !ok {
+                let _ = tokio::fs::remove_file(path).await;
+            }
+        }
+    }
+
+    // 第二轮：只剩下真正因超时/不稳定失败的文件，逐个补下（并发 8）
+    let retry: Vec<(String, std::path::PathBuf, String)> = missing
+        .into_iter()
+        .filter(|(_, path, _)| !path.exists())
+        .collect();
+    if retry.is_empty() {
+        return Ok(());
+    }
+    tracing::info!("第二轮补下载：{} 个文件", retry.len());
+    for chunk in retry.chunks(8) {
+        let mut cmd = tokio::process::Command::new(curl);
+        cmd.arg("--parallel")
+            .arg("--parallel-max")
+            .arg("8")
+            .arg("-s")
+            .arg("-L")
+            .arg("--fail")
+            .arg("--max-time")
+            .arg("40");
+        for (url, path, _) in chunk {
+            cmd.arg("-o").arg(path).arg(url);
+        }
+        let started = std::time::Instant::now();
+        let _ = cmd.status().await;
+        crate::util::fetch::download_log(&format!(
+            "CURL retry {} files {:.1}s",
+            chunk.len(),
+            started.elapsed().as_secs_f64()
+        ));
         for (_, path, sha1) in chunk {
             let ok = tokio::task::spawn_blocking({
                 let sha1 = sha1.clone();
