@@ -674,6 +674,14 @@ pub async fn download_client(
         .join(format!("{version}.jar"));
 
     if !path.exists() || force {
+        let _ = curl_prefetch_files(vec![(
+            client_download.url.to_string(),
+            path.clone(),
+            client_download.sha1.to_string(),
+        )])
+        .await;
+    }
+    if !path.exists() || force {
         let bytes = fetch_minecraft_file(
             st,
             client_download.url.as_str(),
@@ -758,32 +766,28 @@ pub async fn download_assets_index(
 }
 
 
-/// 结合实测：curl 比 rustls 客户端快很多
-/// 这里先用系统 curl 并行预下载缺失的资源文件，再由下面原有流程校验/复制
-async fn curl_prefetch_assets(
-    st: &State,
-    index: &AssetsIndex,
+/// 实测结论：curl（Windows Schannel）比 rustls 客户端在获取 Mojang 资源时快很多
+/// 用系统 curl 并行预下载，然后校验 sha1，错误文件交回原流程重试
+async fn curl_prefetch_files(
+    items: Vec<(String, std::path::PathBuf, String)>,
 ) -> crate::Result<()> {
-    let mut missing: Vec<(String, std::path::PathBuf)> = Vec::new();
-    for (_, asset) in index.objects.iter() {
-        let hash = asset.hash.to_string();
-        let object_path = st.directories.object_dir(&hash);
-        if object_path.exists() {
+    let mut missing: Vec<(String, std::path::PathBuf, String)> = Vec::new();
+    for (url, path, sha1) in items {
+        if path.exists() {
             continue;
         }
-        if let Some(parent) = object_path.parent() {
+        if let Some(parent) = path.parent() {
             let _ = std::fs::create_dir_all(parent);
         }
-        missing.push((hash, object_path));
+        missing.push((url, path, sha1));
     }
     if missing.is_empty() {
         return Ok(());
     }
-    tracing::info!("curl 预下载资源：{} 个文件", missing.len());
+    tracing::info!("curl 预下载：{} 个文件", missing.len());
 
     let curl = if cfg!(windows) { "curl.exe" } else { "curl" };
-    for chunk in missing.chunks(16) {
-        // 取消时不再发起新的批次
+    for chunk in missing.chunks(32) {
         let canceling = crate::install::control::CURRENT_INSTALL
             .try_with(|control| control.is_canceling())
             .unwrap_or(false);
@@ -798,26 +802,28 @@ async fn curl_prefetch_assets(
             .arg("-L")
             .arg("--fail")
             .arg("--max-time")
-            .arg("30");
-        for (hash, path) in chunk {
-            let url = format!(
-                "https://resources.download.minecraft.net/{}/{}",
-                &hash[..2],
-                hash
-            );
+            .arg("60");
+        for (url, path, _) in chunk {
             cmd.arg("-o").arg(path).arg(url);
         }
+        let batch_started = std::time::Instant::now();
         match cmd.status().await {
-            Ok(_) => {}
+            Ok(_) => {
+                let elapsed = batch_started.elapsed().as_secs_f64();
+                crate::util::fetch::download_log(&format!(
+                    "CURL {} files {:.1}s",
+                    chunk.len(),
+                    elapsed
+                ));
+            }
             Err(error) => {
                 tracing::warn!("curl 不可用，回退原有下载流程: {error}");
                 return Ok(());
             }
         }
-        // 校验 sha1，错误文件删掉交给原流程重试
-        for (hash, path) in chunk {
+        for (_, path, sha1) in chunk {
             let ok = tokio::task::spawn_blocking({
-                let hash = hash.clone();
+                let sha1 = sha1.clone();
                 let path = path.clone();
                 move || -> bool {
                     let Ok(bytes) = std::fs::read(&path) else {
@@ -825,7 +831,7 @@ async fn curl_prefetch_assets(
                     };
                     let mut hasher = sha1_smol::Sha1::new();
                     hasher.update(&bytes);
-                    hasher.digest().to_string() == hash
+                    hasher.digest().to_string() == sha1
                 }
             })
             .await
@@ -836,6 +842,29 @@ async fn curl_prefetch_assets(
         }
     }
     Ok(())
+}
+
+async fn curl_prefetch_assets(
+    st: &State,
+    index: &AssetsIndex,
+) -> crate::Result<()> {
+    let items = index
+        .objects
+        .iter()
+        .map(|(_, asset)| {
+            let hash = asset.hash.to_string();
+            (
+                format!(
+                    "https://resources.download.minecraft.net/{}/{}",
+                    &hash[..2],
+                    hash
+                ),
+                st.directories.object_dir(&hash),
+                hash,
+            )
+        })
+        .collect();
+    curl_prefetch_files(items).await
 }
 
 #[tracing::instrument(skip(st, index))]
@@ -955,6 +984,35 @@ pub async fn download_libraries(
         io::create_dir_all(st.directories.libraries_dir()),
         io::create_dir_all(st.directories.version_natives_dir(version))
     }?;
+    // 先用 curl 并行拿下缺失的普通库文件（实测比 rustls 客户端快）
+    let mut prefetch_items: Vec<(String, std::path::PathBuf, String)> = Vec::new();
+    for library in libraries {
+        if !library.downloadable {
+            continue;
+        }
+        if library.native_download(java_arch)?.is_some() {
+            continue;
+        }
+        if let Some(artifact) = library
+            .downloads
+            .as_ref()
+            .and_then(|downloads| downloads.artifact.as_ref())
+        {
+            if let Some(url) = artifact.url.as_ref() {
+                let artifact_path = d::util::get_path_from_artifact(&library.name)?;
+                let path = st.directories.libraries_dir().join(&artifact_path);
+                if !path.exists() || force {
+                    prefetch_items.push((
+                        url.to_string(),
+                        path,
+                        artifact.sha1.to_string(),
+                    ));
+                }
+            }
+        }
+    }
+    let _ = curl_prefetch_files(prefetch_items).await;
+
     // 版本 JSON 里可能有重复条目，重复写同一个文件会报拒绝访问
     let mut seen = std::collections::HashSet::new();
     let unique_libraries: Vec<&Library> = libraries
