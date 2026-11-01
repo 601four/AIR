@@ -674,11 +674,15 @@ pub async fn download_client(
         .join(format!("{version}.jar"));
 
     if !path.exists() || force {
-        let _ = curl_prefetch_files(vec![(
-            client_download.url.to_string(),
-            path.clone(),
-            client_download.sha1.to_string(),
-        )])
+        let _ = curl_prefetch_files(
+            vec![(
+                client_download.url.to_string(),
+                path.clone(),
+                client_download.sha1.to_string(),
+                client_download.size as u64,
+            )],
+            progress.clone(),
+        )
         .await;
     }
     if !path.exists() || force {
@@ -769,17 +773,18 @@ pub async fn download_assets_index(
 /// 实测结论：curl（Windows Schannel）比 rustls 客户端在获取 Mojang 资源时快很多
 /// 用系统 curl 并行预下载，然后校验 sha1，错误文件交回原流程重试
 async fn curl_prefetch_files(
-    items: Vec<(String, std::path::PathBuf, String)>,
+    items: Vec<(String, std::path::PathBuf, String, u64)>,
+    progress: Option<MinecraftDownloadProgress>,
 ) -> crate::Result<()> {
-    let mut missing: Vec<(String, std::path::PathBuf, String)> = Vec::new();
-    for (url, path, sha1) in items {
+    let mut missing: Vec<(String, std::path::PathBuf, String, u64)> = Vec::new();
+    for (url, path, sha1, size) in items {
         if path.exists() {
             continue;
         }
         if let Some(parent) = path.parent() {
             let _ = std::fs::create_dir_all(parent);
         }
-        missing.push((url, path, sha1));
+        missing.push((url, path, sha1, size));
     }
     if missing.is_empty() {
         return Ok(());
@@ -805,7 +810,7 @@ async fn curl_prefetch_files(
             .arg("--fail")
             .arg("--max-time")
             .arg("15");
-        for (url, path, _) in chunk {
+        for (url, path, _, _) in chunk {
             cmd.arg("-o").arg(path).arg(url);
         }
         let batch_started = std::time::Instant::now();
@@ -817,13 +822,17 @@ async fn curl_prefetch_files(
                     chunk.len(),
                     elapsed
                 ));
+                if let Some(progress) = &progress {
+                    let downloaded: u64 = chunk.iter().map(|(_, _, _, size)| *size).sum();
+                    let _ = progress.add_bytes(downloaded).await;
+                }
             }
             Err(error) => {
                 tracing::warn!("curl 不可用，回退原有下载流程: {error}");
                 return Ok(());
             }
         }
-        for (_, path, sha1) in chunk {
+        for (_, path, sha1, _) in chunk {
             let ok = tokio::task::spawn_blocking({
                 let sha1 = sha1.clone();
                 let path = path.clone();
@@ -845,9 +854,9 @@ async fn curl_prefetch_files(
     }
 
     // 第二轮：只剩下真正因超时/不稳定失败的文件，逐个补下（并发 8）
-    let retry: Vec<(String, std::path::PathBuf, String)> = missing
+    let retry: Vec<(String, std::path::PathBuf, String, u64)> = missing
         .into_iter()
-        .filter(|(_, path, _)| !path.exists())
+        .filter(|(_, path, _, _)| !path.exists())
         .collect();
     if retry.is_empty() {
         return Ok(());
@@ -863,7 +872,7 @@ async fn curl_prefetch_files(
             .arg("--fail")
             .arg("--max-time")
             .arg("40");
-        for (url, path, _) in chunk {
+        for (url, path, _, _) in chunk {
             cmd.arg("-o").arg(path).arg(url);
         }
         let started = std::time::Instant::now();
@@ -873,7 +882,11 @@ async fn curl_prefetch_files(
             chunk.len(),
             started.elapsed().as_secs_f64()
         ));
-        for (_, path, sha1) in chunk {
+        if let Some(progress) = &progress {
+            let downloaded: u64 = chunk.iter().map(|(_, _, _, size)| *size).sum();
+            let _ = progress.add_bytes(downloaded).await;
+        }
+        for (_, path, sha1, _) in chunk {
             let ok = tokio::task::spawn_blocking({
                 let sha1 = sha1.clone();
                 let path = path.clone();
@@ -899,6 +912,7 @@ async fn curl_prefetch_files(
 async fn curl_prefetch_assets(
     st: &State,
     index: &AssetsIndex,
+    progress: Option<MinecraftDownloadProgress>,
 ) -> crate::Result<()> {
     let items = index
         .objects
@@ -913,10 +927,11 @@ async fn curl_prefetch_assets(
                 ),
                 st.directories.object_dir(&hash),
                 hash,
+                asset.size as u64,
             )
         })
         .collect();
-    curl_prefetch_files(items).await
+    curl_prefetch_files(items, progress).await
 }
 
 #[tracing::instrument(skip(st, index))]
@@ -931,7 +946,7 @@ pub async fn download_assets(
     progress: Option<MinecraftDownloadProgress>,
 ) -> crate::Result<()> {
     tracing::debug!("Loading assets");
-    curl_prefetch_assets(st, index).await?;
+    curl_prefetch_assets(st, index, progress.clone()).await?;
     let num_futs = index.objects.len();
     let assets = stream::iter(index.objects.iter())
         .map(Ok::<(&String, &Asset), crate::Error>);
@@ -1037,7 +1052,7 @@ pub async fn download_libraries(
         io::create_dir_all(st.directories.version_natives_dir(version))
     }?;
     // 先用 curl 并行拿下缺失的普通库文件（实测比 rustls 客户端快）
-    let mut prefetch_items: Vec<(String, std::path::PathBuf, String)> = Vec::new();
+    let mut prefetch_items: Vec<(String, std::path::PathBuf, String, u64)> = Vec::new();
     for library in libraries {
         if !library.downloadable {
             continue;
@@ -1058,12 +1073,13 @@ pub async fn download_libraries(
                         url.to_string(),
                         path,
                         artifact.sha1.to_string(),
+                        artifact.size as u64,
                     ));
                 }
             }
         }
     }
-    let _ = curl_prefetch_files(prefetch_items).await;
+    let _ = curl_prefetch_files(prefetch_items, progress.clone()).await;
 
     // 版本 JSON 里可能有重复条目，重复写同一个文件会报拒绝访问
     let mut seen = std::collections::HashSet::new();
