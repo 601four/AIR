@@ -955,9 +955,15 @@ pub async fn download_libraries(
         io::create_dir_all(st.directories.libraries_dir()),
         io::create_dir_all(st.directories.version_natives_dir(version))
     }?;
-    let num_files = libraries.len();
+    // 版本 JSON 里可能有重复条目，重复写同一个文件会报拒绝访问
+    let mut seen = std::collections::HashSet::new();
+    let unique_libraries: Vec<&Library> = libraries
+        .iter()
+        .filter(|library| seen.insert(library.name.clone()))
+        .collect();
+    let num_files = unique_libraries.len();
     loading_try_for_each_concurrent(
-        stream::iter(libraries.iter()).map(Ok::<&Library, crate::Error>),
+        stream::iter(unique_libraries.into_iter()).map(Ok::<&Library, crate::Error>),
 		Some(minecraft_download_concurrency()),
         loading_bar,
         loading_amount,
@@ -1063,10 +1069,19 @@ pub async fn download_libraries(
                             .build(),
                     )
                     .await?;
-                    bytes
-                        .copy_to(&path, &st.io_semaphore)
-                        .await
-                        .context(format!("writing library to {}", path.display()))?;
+                    let mut written = Ok(());
+                    for attempt in 0..3 {
+                        written = bytes.copy_to(&path, &st.io_semaphore).await;
+                        if written.is_ok() {
+                            break;
+                        }
+                        // Windows 上可能因防病毒/并发写入短暂拒绝，稍等重试
+                        tokio::time::sleep(std::time::Duration::from_millis(
+                            120 * (attempt + 1) as u64,
+                        ))
+                        .await;
+                    }
+                    written.context(format!("writing library to {}", path.display()))?;
 
                     tracing::trace!(
                         "Fetched library {} to path {:?}",
