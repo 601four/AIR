@@ -272,7 +272,7 @@ async function stop() {
             class="h-14 w-14 shrink-0 rounded-xl border border-solid border-surface-4 object-cover"
         />
         <div class="flex min-w-0 flex-1 flex-col gap-1">
-          <span class="truncate text-xl font-bold text-contrast">{{ selectedInstance.name }}</span>
+          <span class="truncate text-lg font-semibold text-contrast">{{ selectedInstance.name }}</span>
           <div class="flex items-center gap-4 text-secondary">
             <span>{{ selectedInstance.loader }} {{ selectedInstance.game_version }}</span>
             <span>{{ lastPlayedLabel }}</span>
@@ -299,8 +299,15 @@ async function stop() {
           <PlayIcon />
           {{ formatMessage(messages.launch) }}
         </Button>
-        <Button v-else type="colored" color="red" size="lg" class="shrink-0 !text-white" :disabled="actionPending" @click="stop">
-          <StopCircleIcon />
+        <Button
+            v-else
+            type="quiet"
+            size="lg"
+            class="shrink-0 !bg-[#FF496E] hover:!bg-[#FF496E] !text-black font-bold"
+            :disabled="actionPending"
+            @click="stop"
+        >
+          <StopCircleIcon class="!text-black" />
           {{ formatMessage(messages.stop) }}
         </Button>
       </div>
