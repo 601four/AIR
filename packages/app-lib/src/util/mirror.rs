@@ -253,6 +253,14 @@ pub fn candidates(url: &str) -> Vec<String> {
 	};
 
 	if current_loader_mode() == LoaderSource::Cn {
+		// Modrinth 官方的 maven 镜像（加载器库大量走这个域名）
+		// 实测它在国内很慢，改走 BMCLAPI 大学镜像
+		if let Some(rest) = url.strip_prefix("https://launcher-meta.modrinth.com/maven") {
+			push(&mut list, format!("{BMCLAPI}/maven{rest}"));
+			push(&mut list, format!("{ALIYUN_MAVEN}{rest}"));
+			push(&mut list, url.to_string());
+			return list;
+		}
 		for host in [
 			"https://maven.neoforged.net/releases",
 			"https://maven.neoforged.net",
