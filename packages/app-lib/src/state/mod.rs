@@ -339,6 +339,10 @@ impl State {
         let initial_downloads = settings.max_concurrent_downloads.max(32);
         crate::util::fetch::DOWNLOAD_CONCURRENCY
             .store(initial_downloads, std::sync::atomic::Ordering::Relaxed);
+        // 游戏本体 / 库 / 资源下载的并发上限：至少 64
+        crate::launcher::download::set_minecraft_download_concurrency(
+            initial_downloads.max(64),
+        );
         let fetch_semaphore = FetchSemaphore(Semaphore::new(initial_downloads));
         let io_semaphore =
             IoSemaphore(Semaphore::new(settings.max_concurrent_writes));

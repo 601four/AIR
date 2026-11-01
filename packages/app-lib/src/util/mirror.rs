@@ -135,9 +135,23 @@ pub fn rewrite_url(url: &str) -> String {
 	match current_loader_mode() {
 		LoaderSource::Official => {}
 		LoaderSource::Cn => {
-			// Maven Central 走阿里云镜像；Fabric/Forge 仓库暂无可靠国内镜像，保持官方
+			// Maven Central 走阿里云
 			if let Some(rest) = url.strip_prefix("https://repo1.maven.org/maven2") {
 				return format!("{ALIYUN_MAVEN}{rest}");
+			}
+			if let Some(rest) = url.strip_prefix("https://repo.maven.apache.org/maven2") {
+				return format!("{ALIYUN_MAVEN}{rest}");
+			}
+			// 加载器 Maven（NeoForge / Fabric）走 BMCLAPI 的 maven 镜像
+			// 它会 302 到 CERNET/大学镜像，实测比官方快很多
+			for host in [
+				"https://maven.neoforged.net/releases",
+				"https://maven.neoforged.net",
+				"https://maven.fabricmc.net",
+			] {
+				if let Some(rest) = url.strip_prefix(host) {
+					return format!("{BMCLAPI}/maven{rest}");
+				}
 			}
 		}
 		LoaderSource::Custom => {
@@ -226,4 +240,60 @@ pub fn is_broken(category: &'static str) -> bool {
 		}
 		None => false,
 	}
+}
+
+
+/// 多源回退列表：每个地址依次尝试（官方始终作为最后一个）
+pub fn candidates(url: &str) -> Vec<String> {
+	let mut list: Vec<String> = Vec::new();
+	let push = |list: &mut Vec<String>, value: String| {
+		if !list.iter().any(|existing| existing == &value) {
+			list.push(value);
+		}
+	};
+
+	if current_loader_mode() == LoaderSource::Cn {
+		for host in [
+			"https://maven.neoforged.net/releases",
+			"https://maven.neoforged.net",
+			"https://maven.fabricmc.net",
+		] {
+			if let Some(rest) = url.strip_prefix(host) {
+				// 阿里云先试（带缓存的中央库极快），再试 BMCLAPI 大学镜像
+				push(&mut list, format!("{ALIYUN_MAVEN}{rest}"));
+				push(&mut list, format!("{BMCLAPI}/maven{rest}"));
+				push(&mut list, url.to_string());
+				return list;
+			}
+		}
+		if let Some(rest) = url
+			.strip_prefix("https://repo1.maven.org/maven2")
+			.or_else(|| url.strip_prefix("https://repo.maven.apache.org/maven2"))
+		{
+			push(&mut list, format!("{ALIYUN_MAVEN}{rest}"));
+			push(&mut list, url.to_string());
+			return list;
+		}
+		for (from, to) in [
+			("https://piston-meta.mojang.com", BMCLAPI),
+			("https://launchermeta.mojang.com", BMCLAPI),
+			("https://piston-data.mojang.com", BMCLAPI),
+			("https://libraries.minecraft.net", "https://bmclapi2.bangbang93.com/maven"),
+			("https://resources.download.minecraft.net", "https://bmclapi2.bangbang93.com/assets"),
+		] {
+			if let Some(rest) = url.strip_prefix(from) {
+				// PCL 的日志证实：官方 CDN 先下，失败才回退镜像
+				push(&mut list, url.to_string());
+				push(&mut list, format!("{to}{rest}"));
+				return list;
+			}
+		}
+	}
+
+	// CurseForge / Modrinth
+	push(&mut list, rewrite_url(url));
+	if !list.iter().any(|value| value == url) {
+		push(&mut list, url.to_string());
+	}
+	list
 }

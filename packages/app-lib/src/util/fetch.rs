@@ -698,6 +698,48 @@ async fn try_ranged_download(
 	})
 }
 
+
+
+/// 按主机限制并发：大学镜像对高并发会限速，阿里云/官方可以高并发。
+static HOST_LIMITS: LazyLock<
+    Mutex<std::collections::HashMap<String, std::sync::Arc<tokio::sync::Semaphore>>>,
+> = LazyLock::new(|| Mutex::new(std::collections::HashMap::new()));
+
+fn host_limit_for(url: &str) -> usize {
+    if url.contains("maven.aliyun.com") {
+        32
+    } else if url.contains("bmclapi") || url.contains("mirrors.cernet") || url.contains("mirrors.ustc") {
+        // 实测：并发 32 时大量 TLS 握手被终止、速度反而掉到 2MB/s
+        // 并发 12 时稳定在 5.5MB/s 以上 → 限制 12
+        12
+    } else if url.contains("github.com") || url.contains("objects.githubusercontent.com") {
+        8
+    } else {
+        64
+    }
+}
+
+async fn acquire_host_permit(
+    url: &str,
+) -> Option<tokio::sync::OwnedSemaphorePermit> {
+    let limit = host_limit_for(url);
+    let semaphore = {
+        let mut guard = HOST_LIMITS.lock();
+        let key = url
+            .split('/')
+            .nth(2)
+            .unwrap_or("unknown")
+            .to_string();
+        guard
+            .entry(key)
+            .or_insert_with(|| {
+                std::sync::Arc::new(tokio::sync::Semaphore::new(limit))
+            })
+            .clone()
+    };
+    semaphore.acquire_owned().await.ok()
+}
+
 pub async fn fetch_file(
     url: &str,
     sha1: Option<&str>,
@@ -721,12 +763,10 @@ pub async fn fetch_file(
 	};
 	let mut progress = progress;
 
-	for attempt in 0..2 {
-		let target: &str = if attempt == 0 {
-			mirrored_url.as_str()
-		} else {
-			original_url.as_str()
-		};
+	let candidate_list = crate::util::mirror::candidates(url);
+	for attempt in 0..candidate_list.len() {
+		let target: &str = candidate_list[attempt].as_str();
+		let _host_permit = acquire_host_permit(target).await;
 
 		if sha1.is_some()
 			&& let Some(file) =
@@ -763,7 +803,7 @@ pub async fn fetch_file(
 			}
 			Ok(FetchBody::Memory(_)) => unreachable!("requested a file download"),
 			Err(err) => {
-				if attempt == 0 && mirrored_url != original_url {
+				if attempt + 1 < candidate_list.len() {
 					// 镜像缺文件，下一轮用官方地址，并提醒用户
 					// 只提示一次，避免数百个文件同时回退时刷屏
 					crate::util::mirror::record_failure(category);

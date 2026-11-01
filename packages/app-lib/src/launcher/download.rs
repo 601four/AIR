@@ -38,7 +38,21 @@ use std::{
 };
 use tokio::sync::OnceCell;
 
-const MINECRAFT_DOWNLOAD_CONCURRENCY: usize = 8;
+// 游戏本体/库/资源的并发下载数：默认 32，由设置提升
+static MINECRAFT_DOWNLOAD_CONCURRENCY: std::sync::atomic::AtomicUsize =
+    std::sync::atomic::AtomicUsize::new(64);
+
+/// 由状态初始化时根据用户设置调整
+pub fn set_minecraft_download_concurrency(concurrency: usize) {
+    MINECRAFT_DOWNLOAD_CONCURRENCY.store(
+        concurrency.clamp(8, 128),
+        std::sync::atomic::Ordering::Relaxed,
+    );
+}
+
+fn minecraft_download_concurrency() -> usize {
+    MINECRAFT_DOWNLOAD_CONCURRENCY.load(std::sync::atomic::Ordering::Relaxed)
+}
 
 const MINECRAFT_DOWNLOAD_PROGRESS_MIN_BYTES: u64 = 256 * 1024;
 
@@ -743,6 +757,80 @@ pub async fn download_assets_index(
     Ok(res)
 }
 
+
+/// 结合实测：curl 比 rustls 客户端快很多
+/// 这里先用系统 curl 并行预下载缺失的资源文件，再由下面原有流程校验/复制
+async fn curl_prefetch_assets(
+    st: &State,
+    index: &AssetsIndex,
+) -> crate::Result<()> {
+    let mut missing: Vec<(String, std::path::PathBuf)> = Vec::new();
+    for (_, asset) in index.objects.iter() {
+        let hash = asset.hash.to_string();
+        let object_path = st.directories.object_dir(&hash);
+        if object_path.exists() {
+            continue;
+        }
+        if let Some(parent) = object_path.parent() {
+            let _ = std::fs::create_dir_all(parent);
+        }
+        missing.push((hash, object_path));
+    }
+    if missing.is_empty() {
+        return Ok(());
+    }
+    tracing::info!("curl 预下载资源：{} 个文件", missing.len());
+
+    let curl = if cfg!(windows) { "curl.exe" } else { "curl" };
+    for chunk in missing.chunks(40) {
+        let mut cmd = tokio::process::Command::new(curl);
+        cmd.arg("--parallel")
+            .arg("--parallel-max")
+            .arg("24")
+            .arg("-s")
+            .arg("-L")
+            .arg("--fail")
+            .arg("--max-time")
+            .arg("120");
+        for (hash, path) in chunk {
+            let url = format!(
+                "https://resources.download.minecraft.net/{}/{}",
+                &hash[..2],
+                hash
+            );
+            cmd.arg("-o").arg(path).arg(url);
+        }
+        match cmd.status().await {
+            Ok(_) => {}
+            Err(error) => {
+                tracing::warn!("curl 不可用，回退原有下载流程: {error}");
+                return Ok(());
+            }
+        }
+        // 校验 sha1，错误文件删掉交给原流程重试
+        for (hash, path) in chunk {
+            let ok = tokio::task::spawn_blocking({
+                let hash = hash.clone();
+                let path = path.clone();
+                move || -> bool {
+                    let Ok(bytes) = std::fs::read(&path) else {
+                        return false;
+                    };
+                    let mut hasher = sha1_smol::Sha1::new();
+                    hasher.update(&bytes);
+                    hasher.digest().to_string() == hash
+                }
+            })
+            .await
+            .unwrap_or(false);
+            if !ok {
+                let _ = tokio::fs::remove_file(path).await;
+            }
+        }
+    }
+    Ok(())
+}
+
 #[tracing::instrument(skip(st, index))]
 
 pub async fn download_assets(
@@ -755,12 +843,13 @@ pub async fn download_assets(
     progress: Option<MinecraftDownloadProgress>,
 ) -> crate::Result<()> {
     tracing::debug!("Loading assets");
+    curl_prefetch_assets(st, index).await?;
     let num_futs = index.objects.len();
     let assets = stream::iter(index.objects.iter())
         .map(Ok::<(&String, &Asset), crate::Error>);
 
     loading_try_for_each_concurrent(assets,
-			Some(MINECRAFT_DOWNLOAD_CONCURRENCY),
+			Some(minecraft_download_concurrency()),
             loading_bar,
             loading_amount,
             num_futs,
@@ -862,7 +951,7 @@ pub async fn download_libraries(
     let num_files = libraries.len();
     loading_try_for_each_concurrent(
         stream::iter(libraries.iter()).map(Ok::<&Library, crate::Error>),
-		Some(MINECRAFT_DOWNLOAD_CONCURRENCY),
+		Some(minecraft_download_concurrency()),
         loading_bar,
         loading_amount,
         num_files,
