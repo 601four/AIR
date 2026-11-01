@@ -744,6 +744,9 @@ async fn acquire_host_permit(
 /// 下载日志：写到系统临时目录的 aircore-download.log
 pub fn download_log(line: &str) {
     use std::io::Write;
+    if std::env::var_os("AIRCORE_DOWNLOAD_LOG").is_none() {
+        return;
+    }
     let path = std::env::temp_dir().join("aircore-download.log");
     if let Ok(mut file) = std::fs::OpenOptions::new()
         .create(true)
