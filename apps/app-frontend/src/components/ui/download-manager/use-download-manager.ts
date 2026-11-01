@@ -61,6 +61,7 @@ export interface DownloadManagerJob {
 	progressLabel: string
 	waiting: boolean
 	eta: string
+	elapsed?: string
 	canRetry: boolean
 	canCopyDetails: boolean
 	copied: boolean
@@ -181,6 +182,7 @@ export function useDownloadManager() {
 					.filter(Boolean)
 					.join(' · '),
 				waiting: !progress || progress.total <= 0,
+				elapsed: display.formatElapsed(job.created, Date.now()),
 				eta:
 					job.paused || job.canceling
 						? ''

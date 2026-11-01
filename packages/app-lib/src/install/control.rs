@@ -46,7 +46,7 @@ impl InstallControl {
         if accepted { Ok(()) } else { Err(unavailable()) }
     }
 
-    pub(super) fn is_canceling(&self) -> bool {
+    pub(crate) fn is_canceling(&self) -> bool {
         *self.mode.borrow() == Mode::Canceling
     }
 

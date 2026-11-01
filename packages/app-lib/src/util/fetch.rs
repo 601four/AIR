@@ -740,6 +740,20 @@ async fn acquire_host_permit(
     semaphore.acquire_owned().await.ok()
 }
 
+
+/// 下载日志：写到系统临时目录的 aircore-download.log
+pub fn download_log(line: &str) {
+    use std::io::Write;
+    let path = std::env::temp_dir().join("aircore-download.log");
+    if let Ok(mut file) = std::fs::OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(path)
+    {
+        let _ = writeln!(file, "{line}");
+    }
+}
+
 pub async fn fetch_file(
     url: &str,
     sha1: Option<&str>,
@@ -794,8 +808,16 @@ pub async fn fetch_file(
 		)
 		.await;
 
+		let attempt_started = std::time::Instant::now();
 		match body {
 			Ok(FetchBody::File(file)) => {
+				download_log(&format!(
+					"OK  {:.2}MB {:.1}s {:.2}MB/s  {}",
+					file.size as f64 / 1048576.0,
+					attempt_started.elapsed().as_secs_f64(),
+					file.size as f64 / 1048576.0 / attempt_started.elapsed().as_secs_f64().max(0.001),
+					target
+				));
 				if attempt == 0 && mirrored_url != original_url {
 					crate::util::mirror::record_success(category);
 				}
@@ -803,6 +825,12 @@ pub async fn fetch_file(
 			}
 			Ok(FetchBody::Memory(_)) => unreachable!("requested a file download"),
 			Err(err) => {
+				download_log(&format!(
+					"ERR {:.1}s  {}  {}",
+					attempt_started.elapsed().as_secs_f64(),
+					err,
+					target
+				));
 				if attempt + 1 < candidate_list.len() {
 					// 镜像缺文件，下一轮用官方地址，并提醒用户
 					// 只提示一次，避免数百个文件同时回退时刷屏

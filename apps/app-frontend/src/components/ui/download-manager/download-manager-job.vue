@@ -204,6 +204,7 @@ const instanceLink = computed(() =>
 				class="flex items-center justify-between gap-2 text-xs font-medium leading-4 text-primary tabular-nums"
 			>
 				<span>{{ job.progressLabel }}</span>
+				<span v-if="job.elapsed" class="pr-2 text-secondary">已用 {{ job.elapsed }}</span>
 				<span v-if="job.eta" v-tooltip="formatMessage(messages.eta)" class="pr-2">
 					{{ job.eta }}
 				</span>

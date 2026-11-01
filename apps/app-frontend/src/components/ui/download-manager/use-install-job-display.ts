@@ -430,5 +430,15 @@ export function useInstallJobDisplay() {
 		getEffectiveProgress,
 		formatRate,
 		formatEta,
+		formatElapsed,
+	}
+
+	function formatElapsed(start: string | number, nowMs: number): string {
+		const startMs = typeof start === "number" ? start : Date.parse(start)
+		if (!Number.isFinite(startMs) || !Number.isFinite(nowMs)) return ""
+		const seconds = Math.max(0, Math.floor((nowMs - startMs) / 1000))
+		const minutes = Math.floor(seconds / 60)
+		const rest = seconds % 60
+		return `${minutes}:${String(rest).padStart(2, "0")}`
 	}
 }

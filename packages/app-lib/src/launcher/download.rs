@@ -782,7 +782,14 @@ async fn curl_prefetch_assets(
     tracing::info!("curl 预下载资源：{} 个文件", missing.len());
 
     let curl = if cfg!(windows) { "curl.exe" } else { "curl" };
-    for chunk in missing.chunks(40) {
+    for chunk in missing.chunks(16) {
+        // 取消时不再发起新的批次
+        let canceling = crate::install::control::CURRENT_INSTALL
+            .try_with(|control| control.is_canceling())
+            .unwrap_or(false);
+        if canceling {
+            return Ok(());
+        }
         let mut cmd = tokio::process::Command::new(curl);
         cmd.arg("--parallel")
             .arg("--parallel-max")
@@ -791,7 +798,7 @@ async fn curl_prefetch_assets(
             .arg("-L")
             .arg("--fail")
             .arg("--max-time")
-            .arg("120");
+            .arg("30");
         for (hash, path) in chunk {
             let url = format!(
                 "https://resources.download.minecraft.net/{}/{}",
