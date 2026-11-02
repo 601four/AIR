@@ -76,17 +76,16 @@
 				{{ formatMessage(messages.store) }}
 				<ExternalIcon aria-hidden="true" class="external-icon" />
 			</a>
-			<a
+			<button
 				v-if="mcmodQuery"
-				:href="mcmodUrl"
-				:target="linkTarget"
-				rel="noopener nofollow ugc"
-				@click.prevent="emit('open-mcmod')"
+				type="button"
+				class="flex gap-2 items-center w-fit text-primary leading-[1.2] hover:underline cursor-pointer bg-transparent border-0 p-0 font-semibold"
+				@click="emit('open-mcmod')"
 			>
 				<WikiIcon aria-hidden="true" />
 				{{ formatMessage(messages.mcmod) }}
 				<ExternalIcon aria-hidden="true" class="external-icon" />
-			</a>
+			</button>
 			<hr
 				v-if="
 					(project.issues_url ||
