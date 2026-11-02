@@ -6,6 +6,7 @@
 			project.wiki_url ||
 			project.discord_url ||
 			project.site_url ||
+			mcmodQuery ||
 			projectV3?.link_urls.store?.url ||
 			project.donation_urls.length > 0
 		"
@@ -75,6 +76,16 @@
 				{{ formatMessage(messages.store) }}
 				<ExternalIcon aria-hidden="true" class="external-icon" />
 			</a>
+			<a
+				v-if="mcmodQuery"
+				:href="mcmodUrl"
+				:target="linkTarget"
+				rel="noopener nofollow ugc"
+			>
+				<WikiIcon aria-hidden="true" />
+				{{ formatMessage(messages.mcmod) }}
+				<ExternalIcon aria-hidden="true" class="external-icon" />
+			</a>
 			<hr
 				v-if="
 					(project.issues_url ||
@@ -133,11 +144,13 @@ import {
 	WikiIcon,
 } from '@modrinth/assets'
 
+import { computed } from 'vue'
+
 import { defineMessages, useVIntl } from '../../composables/i18n'
 
 const { formatMessage } = useVIntl()
 
-defineProps<{
+const props = defineProps<{
 	project: {
 		issues_url: string
 		source_url: string
@@ -152,7 +165,12 @@ defineProps<{
 	}
 	projectV3?: Labrinth.Projects.v3.Project
 	linkTarget: string
+	mcmodQuery?: string
 }>()
+
+const mcmodUrl = computed(
+	() => `https://search.mcmod.cn/s?key=${encodeURIComponent(props.mcmodQuery ?? '')}`,
+)
 
 const messages = defineMessages({
 	title: {
@@ -182,6 +200,10 @@ const messages = defineMessages({
 	store: {
 		id: 'project.about.links.store',
 		defaultMessage: 'Visit store page',
+	},
+	mcmod: {
+		id: 'project.about.links.mcmod',
+		defaultMessage: 'View on MCMod',
 	},
 	donateGeneric: {
 		id: 'project.about.links.donate.generic',

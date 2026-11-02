@@ -3734,6 +3734,7 @@
   "project.about.links.issues": {
     "defaultMessage": "Report issues"
   },
+  "project.about.links.mcmod": "View on MCMod",
   "project.about.links.site": {
     "defaultMessage": "Visit website"
   },

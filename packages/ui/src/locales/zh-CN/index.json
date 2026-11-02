@@ -3734,6 +3734,7 @@
   "project.about.links.issues": {
     "defaultMessage": "报告问题"
   },
+  "project.about.links.mcmod": "在 MC 百科查看",
   "project.about.links.site": {
     "defaultMessage": "访问网站"
   },
@@ -7455,4 +7456,3 @@
     "defaultMessage": "类型"
   }
 }
-

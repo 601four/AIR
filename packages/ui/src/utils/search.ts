@@ -18,6 +18,8 @@ import { sortedCategories } from '@modrinth/utils'
 import { type Component, computed, readonly, type Ref, ref } from 'vue'
 import { type LocationQueryRaw, type LocationQueryValue, useRoute } from 'vue-router'
 
+import { translateSearchQuery } from './zh-search-aliases'
+
 import { defineMessage, useVIntl } from '../composables/i18n'
 import { getProjectTypeIcon } from './auto-icons'
 import {
@@ -917,7 +919,7 @@ export function useSearch(
 		const params = [`limit=${maxResults.value}`, `index=${currentSortType.value.name}`]
 
 		if (query.value.length > 0) {
-			params.push(`query=${encodeURIComponent(query.value)}`)
+			params.push(`query=${encodeURIComponent(translateSearchQuery(query.value))}`)
 		}
 
 		if (newFilters.value) {

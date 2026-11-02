@@ -24,6 +24,7 @@
 				link-target="_blank"
 				:project="data"
 				:project-v3="projectV3"
+				:mcmod-query="data.title"
 				class="project-sidebar-section"
 			/>
 			<ProjectSidebarTags :project="data" class="project-sidebar-section" />
