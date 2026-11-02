@@ -130,6 +130,7 @@ import {
 	takeCurseForgeNotice,
 } from '@/helpers/curseforge-notices'
 import {
+	add_project_from_path,
 	can_current_user_use_shared_instances,
 	get as getInstance,
 	run,
@@ -738,6 +739,30 @@ onMounted(async () => {
 			}
 			const droppedPath = paths[0]
 			const lower = droppedPath.toLowerCase()
+			// 实例页面拖入 jar / zip：直接装进该实例，不再走上传弹窗
+			if (
+				(lower.endsWith('.jar') || lower.endsWith('.zip')) &&
+				route.path.startsWith('/instance/')
+			) {
+				const instanceId = decodeURIComponent(route.path.split('/')[2] ?? '')
+				if (instanceId) {
+					try {
+						const installedPath = await add_project_from_path(instanceId, droppedPath)
+						notificationManager?.addNotification?.({
+							type: 'success',
+							title: '已添加到实例',
+							text: installedPath.split(/[\\/]/).pop() ?? installedPath,
+						})
+					} catch (error) {
+						notificationManager?.addNotification?.({
+							type: 'error',
+							title: '添加到实例失败',
+							text: String(error),
+						})
+					}
+					return
+				}
+			}
 			try {
 				let instanceId = null
 				if (lower.endsWith('.mrpack')) {
