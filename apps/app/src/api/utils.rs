@@ -727,23 +727,63 @@ pub async fn mcmod_translate(name: String) -> Option<String> {
         .build()
         .ok()?;
     let body = client.get(&search_url).send().await.ok()?.text().await.ok()?;
-    parse_english_name(&body)
+    if let Some(english) = parse_english_name(&body) {
+        return Some(english);
+    }
+    // 回退：拿到 class id 后读详情页标题里的英文名
+    let id = parse_class_id(&body)?;
+    let page_url = format!("https://www.mcmod.cn/class/{id}.html");
+    let page = client.get(&page_url).send().await.ok()?.text().await.ok()?;
+    parse_title_english(&page)
 }
 
 fn parse_english_name(body: &str) -> Option<String> {
-    let index = body.find("/class/")?;
-    let tail = &body[index..];
-    let close = tail.find("</a>")?;
-    let anchor = &tail[..close];
-    let open_paren = anchor.find('(')?;
-    let close_paren = anchor[open_paren..].find(')')? + open_paren;
-    let candidate = anchor[open_paren + 1..close_paren].trim();
-    if candidate.is_empty() {
-        return None;
+    let mut rest = body;
+    while let Some(index) = rest.find("/class/") {
+        let tail = &rest[index + "/class/".len()..];
+        let digits: String = tail.chars().take_while(|c| c.is_ascii_digit()).collect();
+        if !digits.is_empty() {
+            if let Some(close) = tail.find("</a>") {
+                let anchor = &tail[..close];
+                if let (Some(open_paren), Some(close_paren)) = (anchor.rfind('('), anchor.rfind(')')) {
+                    if close_paren > open_paren + 1 {
+                        let candidate = anchor[open_paren + 1..close_paren].trim();
+                        if candidate.chars().any(|c| c.is_ascii_alphabetic()) {
+                            return Some(candidate.to_string());
+                        }
+                    }
+                }
+            }
+        }
+        rest = tail;
     }
-    // 只接受含 ASCII 字母的名字，避免拿到中文别名
-    if !candidate.chars().any(|c| c.is_ascii_alphabetic()) {
-        return None;
-    }
-    Some(candidate.to_string())
+    None
 }
+
+fn parse_class_id(body: &str) -> Option<String> {
+    let mut rest = body;
+    while let Some(index) = rest.find("/class/") {
+        let tail = &rest[index + "/class/".len()..];
+        let digits: String = tail.chars().take_while(|c| c.is_ascii_digit()).collect();
+        if !digits.is_empty() {
+            return Some(digits);
+        }
+        rest = tail;
+    }
+    None
+}
+
+fn parse_title_english(html: &str) -> Option<String> {
+    let start = html.find("<title>")? + "<title>".len();
+    let end = html[start..].find("</title>")? + start;
+    let title = &html[start..end];
+    let open_paren = title.rfind('(')?;
+    let close_paren = title[open_paren..].find(')')? + open_paren;
+    let candidate = title[open_paren + 1..close_paren].trim();
+    if candidate.chars().any(|c| c.is_ascii_alphabetic()) {
+        Some(candidate.to_string())
+    } else {
+        None
+    }
+}
+
