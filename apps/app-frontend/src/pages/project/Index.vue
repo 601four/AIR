@@ -325,7 +325,7 @@ const router = useRouter()
 
 const openMcmod = async () => {
 	try {
-		const url = await invoke<string>('mcmod_class_url', { name: data.value?.title ?? '' })
+		const url = await invoke<string>('plugin:utils|mcmod_class_url', { name: data.value?.title ?? '' })
 		await openUrl(url)
 	} catch (error) {
 		const title = data.value?.title ?? ''

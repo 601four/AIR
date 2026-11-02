@@ -25,7 +25,7 @@ export async function translateSearchParams(params: string): Promise<string> {
 	}
 
 	try {
-		const english = await invoke<string | null>('mcmod_translate', { name: raw })
+		const english = await invoke<string | null>('plugin:utils|mcmod_translate', { name: raw })
 		if (english) {
 			cache.set(raw, english)
 			return params.replace(match[0], `query=${encodeURIComponent(english)}`)
