@@ -70,6 +70,8 @@ pub fn init<R: Runtime>() -> tauri::plugin::TauriPlugin<R> {
             get_data_dir,
             set_data_dir,
             translate_text,
+            mcmod_class_url,
+            mcmod_translate,
 ])
         .build()
 }
@@ -654,4 +656,94 @@ async fn translate_text_inner(text: String, target: Option<String>) -> anyhow::R
         .and_then(|v| v.as_str())
         .map(|s| s.to_string())
         .ok_or_else(|| anyhow::anyhow!("翻译失败"))
+}
+
+/// MC 百科：先用搜索页找到第一个详情页，失败回退到搜索地址
+#[tauri::command]
+pub async fn mcmod_class_url(name: String) -> std::result::Result<String, String> {
+    let encoded = percent_encode(&name);
+    let search_url = format!("https://search.mcmod.cn/s?key={encoded}");
+    let client = reqwest::Client::builder()
+        .user_agent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AirCore/1.0")
+        .connect_timeout(std::time::Duration::from_secs(10))
+        .timeout(std::time::Duration::from_secs(15))
+        .build()
+        .map_err(|e| e.to_string())?;
+    let Ok(response) = client.get(&search_url).send().await else {
+        return Ok(search_url);
+    };
+    if !response.status().is_success() {
+        return Ok(search_url);
+    }
+    let Ok(body) = response.text().await else {
+        return Ok(search_url);
+    };
+    if let Some(url) = find_first_class_link(&body) {
+        return Ok(url);
+    }
+    Ok(search_url)
+}
+
+fn percent_encode(value: &str) -> String {
+    let mut out = String::new();
+    for byte in value.as_bytes() {
+        if byte.is_ascii_alphanumeric() || matches!(byte, b'-' | b'_' | b'.' | b'~') {
+            out.push(*byte as char);
+        } else {
+            out.push_str(&format!("%{byte:02X}"));
+        }
+    }
+    out
+}
+
+fn find_first_class_link(body: &str) -> Option<String> {
+    let mut rest = body;
+    while let Some(index) = rest.find("/class/") {
+        let tail = &rest[index + "/class/".len()..];
+        let digits: String = tail.chars().take_while(|c| c.is_ascii_digit()).collect();
+        if !digits.is_empty() {
+            if let Some(ext_len) = tail[digits.len()..].find(".html") {
+                if ext_len <= 0 {
+                    return Some(format!("https://www.mcmod.cn/class/{digits}.html"));
+                }
+            }
+            return Some(format!("https://www.mcmod.cn/class/{digits}.html"));
+        }
+        rest = &tail;
+    }
+    None
+}
+
+/// 从 MC 百科搜索结果中取出第一个模组的英文名
+/// 例如搜索「钠」会得到 "Sodium"
+#[tauri::command]
+pub async fn mcmod_translate(name: String) -> Option<String> {
+    let encoded = percent_encode(&name);
+    let search_url = format!("https://search.mcmod.cn/s?key={encoded}");
+    let client = reqwest::Client::builder()
+        .user_agent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AirCore/1.0")
+        .connect_timeout(std::time::Duration::from_secs(8))
+        .timeout(std::time::Duration::from_secs(12))
+        .build()
+        .ok()?;
+    let body = client.get(&search_url).send().await.ok()?.text().await.ok()?;
+    parse_english_name(&body)
+}
+
+fn parse_english_name(body: &str) -> Option<String> {
+    let index = body.find("/class/")?;
+    let tail = &body[index..];
+    let close = tail.find("</a>")?;
+    let anchor = &tail[..close];
+    let open_paren = anchor.find('(')?;
+    let close_paren = anchor[open_paren..].find(')')? + open_paren;
+    let candidate = anchor[open_paren + 1..close_paren].trim();
+    if candidate.is_empty() {
+        return None;
+    }
+    // 只接受含 ASCII 字母的名字，避免拿到中文别名
+    if !candidate.chars().any(|c| c.is_ascii_alphabetic()) {
+        return None;
+    }
+    Some(candidate.to_string())
 }

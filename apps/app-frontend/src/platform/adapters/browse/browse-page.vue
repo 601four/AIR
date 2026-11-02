@@ -41,6 +41,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { useAppEvent } from '@/composables/use-app-event'
 import { useAppSettings } from '@/composables/use-app-settings.ts'
 import { get_project, get_search_results_v3, get_version_many } from '@/helpers/cache.js'
+import { translateSearchParams } from '@/helpers/zh-search.ts'
 import {
 	get_installed_project_ids as getInstalledProjectIds,
 	getInstanceIconUrl,
@@ -1073,7 +1074,8 @@ function onSearchResultsInstalled(ids: string[]) {
 	newlyInstalled.value = Array.from(new Set([...newlyInstalled.value, ...ids]))
 }
 
-async function search(requestParams: string) {
+async function search(inputParams: string) {
+	const requestParams = await translateSearchParams(inputParams)
 	debugLog('searching v3', requestParams)
 	const isServer = projectType.value === 'server'
 

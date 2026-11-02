@@ -81,6 +81,7 @@
 				:href="mcmodUrl"
 				:target="linkTarget"
 				rel="noopener nofollow ugc"
+				@click.prevent="emit('open-mcmod')"
 			>
 				<WikiIcon aria-hidden="true" />
 				{{ formatMessage(messages.mcmod) }}
@@ -167,6 +168,8 @@ const props = defineProps<{
 	linkTarget: string
 	mcmodQuery?: string
 }>()
+
+const emit = defineEmits<{ (event: 'open-mcmod'): void }>()
 
 const mcmodUrl = computed(
 	() => `https://search.mcmod.cn/s?key=${encodeURIComponent(props.mcmodQuery ?? '')}`,

@@ -25,6 +25,7 @@
 				:project="data"
 				:project-v3="projectV3"
 				:mcmod-query="data.title"
+				@open-mcmod="openMcmod"
 				class="project-sidebar-section"
 			/>
 			<ProjectSidebarTags :project="data" class="project-sidebar-section" />
@@ -276,6 +277,7 @@ import {
 	useVIntl,
 } from '@modrinth/ui'
 import { useQueryClient } from '@tanstack/vue-query'
+import { invoke } from '@tauri-apps/api/core'
 import { openUrl } from '@tauri-apps/plugin-opener'
 import dayjs from 'dayjs'
 import relativeTime from 'dayjs/plugin/relativeTime'
@@ -320,6 +322,16 @@ const { handleError } = injectNotificationManager()
 const { install: installVersion } = injectContentInstall()
 const route = useRoute()
 const router = useRouter()
+
+const openMcmod = async () => {
+	try {
+		const url = await invoke<string>('mcmod_class_url', { name: data.value?.title ?? '' })
+		await openUrl(url)
+	} catch (error) {
+		const title = data.value?.title ?? ''
+		await openUrl(`https://search.mcmod.cn/s?key=${encodeURIComponent(title)}`)
+	}
+}
 const displayedProjectRoute = shallowRef(router.currentRoute.value)
 watch(
 	() => router.currentRoute.value,
