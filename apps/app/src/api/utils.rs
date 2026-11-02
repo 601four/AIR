@@ -714,11 +714,9 @@ fn find_first_class_link(body: &str) -> Option<String> {
     None
 }
 
-/// 从 MC 百科搜索结果中取出第一个模组的英文名
-/// 例如搜索「钠」会得到 "Sodium"
-#[tauri::command]
-pub async fn mcmod_translate(name: String) -> Option<String> {
-    let encoded = percent_encode(&name);
+/// 从 MC 百科查询英文名（网络）
+async fn mcmod_lookup(name: &str) -> Option<String> {
+    let encoded = percent_encode(name);
     let search_url = format!("https://search.mcmod.cn/s?key={encoded}");
     let client = reqwest::Client::builder()
         .user_agent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AirCore/1.0")
@@ -730,11 +728,75 @@ pub async fn mcmod_translate(name: String) -> Option<String> {
     if let Some(english) = parse_english_name(&body) {
         return Some(english);
     }
-    // 回退：拿到 class id 后读详情页标题里的英文名
     let id = parse_class_id(&body)?;
     let page_url = format!("https://www.mcmod.cn/class/{id}.html");
     let page = client.get(&page_url).send().await.ok()?.text().await.ok()?;
     parse_title_english(&page)
+}
+
+#[tauri::command]
+pub async fn mcmod_translate(name: String) -> Option<String> {
+    mcmod_lookup(&name).await
+}
+
+/// 把搜索参数里的中文 query 换成英文（供 cache 命令统一使用）
+pub async fn translate_cjk_query_params(params: &str) -> String {
+    let Some(index) = params.find("query=") else {
+        return params.to_string();
+    };
+    let value_start = index + "query=".len();
+    let value_end = params[value_start..]
+        .find('&')
+        .map(|offset| value_start + offset)
+        .unwrap_or(params.len());
+    let raw = percent_decode(&params[value_start..value_end]);
+    if !raw.chars().any(is_cjk) {
+        return params.to_string();
+    }
+    let Some(english) = mcmod_lookup(&raw).await else {
+        return params.to_string();
+    };
+    let mut result = String::with_capacity(params.len() + english.len());
+    result.push_str(&params[..value_start]);
+    result.push_str(&percent_encode(&english));
+    result.push_str(&params[value_end..]);
+    result
+}
+
+fn is_cjk(character: char) -> bool {
+    matches!(character as u32, 0x4e00..=0x9fff)
+}
+
+fn percent_decode(value: &str) -> String {
+    let bytes = value.as_bytes();
+    let mut out: Vec<u8> = Vec::with_capacity(bytes.len());
+    let mut index = 0;
+    while index < bytes.len() {
+        match bytes[index] {
+            b'%' if index + 2 < bytes.len() => {
+                let hex = std::str::from_utf8(&bytes[index + 1..index + 3]).ok();
+                match hex.and_then(|hex| u8::from_str_radix(hex, 16).ok()) {
+                    Some(byte) => {
+                        out.push(byte);
+                        index += 3;
+                    }
+                    None => {
+                        out.push(bytes[index]);
+                        index += 1;
+                    }
+                }
+            }
+            b'+' => {
+                out.push(b' ');
+                index += 1;
+            }
+            byte => {
+                out.push(byte);
+                index += 1;
+            }
+        }
+    }
+    String::from_utf8_lossy(&out).to_string()
 }
 
 fn parse_english_name(body: &str) -> Option<String> {

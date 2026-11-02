@@ -8,7 +8,9 @@ macro_rules! impl_cache_methods {
                 #[tauri::command]
                 pub async fn [<get_ $variant:snake>](id: &str, cache_behaviour: Option<CacheBehaviour>) -> Result<Option<$type>>
                 {
-                    Ok(theseus::cache::[<get_ $variant:snake>](id, cache_behaviour).await?)
+                    let translated =
+                        crate::api::utils::translate_cjk_query_params(id).await;
+                    Ok(theseus::cache::[<get_ $variant:snake>](&translated, cache_behaviour).await?)
                 }
 
                 #[tauri::command]
