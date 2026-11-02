@@ -324,11 +324,21 @@ const route = useRoute()
 const router = useRouter()
 
 const openMcmod = async () => {
+	const title = data.value?.title ?? ''
+	const log = async (line) => {
+		try {
+			await invoke('plugin:utils|debug_log_append', {
+				lines: `[mcmod] ${new Date().toISOString()} ${line}\n`,
+			})
+		} catch {}
+	}
+	await log(`click title="${title}"`)
 	try {
-		const url = await invoke<string>('plugin:utils|mcmod_class_url', { name: data.value?.title ?? '' })
+		const url = await invoke('plugin:utils|mcmod_class_url', { name: title })
+		await log(`resolved ${url}`)
 		await openUrl(url)
 	} catch (error) {
-		const title = data.value?.title ?? ''
+		await log(`error ${String(error)}`)
 		await openUrl(`https://search.mcmod.cn/s?key=${encodeURIComponent(title)}`)
 	}
 }
