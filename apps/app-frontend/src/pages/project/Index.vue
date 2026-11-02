@@ -308,6 +308,7 @@ import {
 	list as listInstances,
 } from '@/helpers/instance'
 import { get_loader_versions as getLoaderManifest } from '@/helpers/metadata'
+import { resolveMcmodUrl } from '@/helpers/mcmod'
 import { get_by_instance_id } from '@/helpers/process'
 import { get_categories, get_game_versions, get_loaders } from '@/helpers/tags'
 import { getServerAddress } from '@/helpers/worlds'
@@ -325,23 +326,14 @@ const router = useRouter()
 
 const openMcmod = async () => {
 	const title = data.value?.title ?? ''
-	const log = async (line) => {
-		try {
-			await invoke('plugin:utils|debug_log_append', {
-				lines: `[mcmod] ${new Date().toISOString()} ${line}\n`,
-			})
-		} catch {}
-	}
-	await log(`click title="${title}"`)
 	try {
-		const url = await invoke('plugin:utils|mcmod_class_url', { name: title })
-		await log(`resolved ${url}`)
+		const url = await resolveMcmodUrl(title)
 		await openUrl(url)
-	} catch (error) {
-		await log(`error ${String(error)}`)
+	} catch {
 		await openUrl(`https://search.mcmod.cn/s?key=${encodeURIComponent(title)}`)
 	}
 }
+
 const displayedProjectRoute = shallowRef(router.currentRoute.value)
 watch(
 	() => router.currentRoute.value,

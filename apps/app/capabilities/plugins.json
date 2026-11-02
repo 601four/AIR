@@ -2,7 +2,9 @@
 	"identifier": "plugins",
 	"description": "",
 	"local": true,
-	"windows": ["main"],
+	"windows": [
+		"main"
+	],
 	"permissions": [
 		"dialog:allow-open",
 		"dialog:allow-confirm",
@@ -51,6 +53,15 @@
 				},
 				{
 					"url": "https://*.taila228c5.ts.net/*"
+				},
+				{
+					"url": "https://search.mcmod.cn/*"
+				},
+				{
+					"url": "https://www.mcmod.cn/*"
+				},
+				{
+					"url": "https://mcmod.cn/*"
 				}
 			]
 		},
