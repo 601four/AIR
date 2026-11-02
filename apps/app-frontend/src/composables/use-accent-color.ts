@@ -84,9 +84,6 @@ export function applyAccentColor(color: string) {
 	root.style.setProperty('--color-brand-shadow', rgba(color, 0.7))
 	root.style.setProperty('--loading-bar-gradient', `linear-gradient(to right, ${color} 0%, ${mix(color, '#ffffff', 0.35)} 100%)`)
 
-	// 同时覆盖 green 系列变量，让组件里的 text-green / bg-green 也跟着变
-	root.style.setProperty('--color-green', color)
-	root.style.setProperty('--color-green-highlight', isDark ? rgba(color, 0.25) : mix(color, '#ffffff', 0.8))
 
 	// 侧边栏 / 顶栏用的是 --brand-gradient-*，原本硬编码为绿色渐变，这里一并换成主题色
 	// 和上游一样是“很深的主题色”渐变，而不是直接拿亮色堆上去
